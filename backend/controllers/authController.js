@@ -56,7 +56,8 @@ exports.signup = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: { message: 'Server error during signup' } });
+    console.error('Signup Error:', error);
+    res.status(500).json({ success: false, error: { message: 'Server error during signup: ' + error.message } });
   }
 };
 
@@ -93,7 +94,8 @@ exports.signin = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: { message: 'Server error during signin' } });
+    console.error('Signin Error:', error);
+    res.status(500).json({ success: false, error: { message: 'Server error during signin: ' + error.message } });
   }
 };
 
@@ -185,3 +187,4 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, error: { message: 'Server error resetting password' } });
   }
 };
+
