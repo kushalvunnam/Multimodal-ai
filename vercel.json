@@ -3,13 +3,16 @@
   "builds": [
     {
       "src": "frontend/package.json",
-      "use": "@vercel/vite"
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "https://multimodal-ai-b0xm.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
