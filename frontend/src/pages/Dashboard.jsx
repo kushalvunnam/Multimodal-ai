@@ -1,5 +1,5 @@
 ﻿import { useState, useRef, useEffect } from 'react';
-import { getUserAnalyses } from '../services/api';
+import { getDashboardStats } from '../services/api';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere, Torus, Float, Environment } from '@react-three/drei';
 import * as THREE from 'three';
@@ -168,6 +168,13 @@ export default function Dashboard() {
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-10 text-slate-500 text-sm font-medium">Loading workspace...</div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 bg-red-50/50 rounded-2xl border border-dashed border-red-200">
+              <AlertTriangle className="w-8 h-8 text-red-400 mb-4" />
+              <h3 className="text-lg font-bold text-red-800 mb-2">Error loading dashboard</h3>
+              <p className="text-red-500 text-sm mb-6">We couldn't connect to the server.</p>
+              <button onClick={() => window.location.reload()} className="px-6 py-2 bg-white text-red-600 text-sm font-bold rounded-xl border border-red-200 hover:bg-red-50 shadow-sm">Retry</button>
+            </div>
           ) : recent.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
               <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-slate-100">

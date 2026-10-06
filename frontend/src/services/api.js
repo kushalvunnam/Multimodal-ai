@@ -17,6 +17,7 @@ export const forgotPassword = async (email) => (await apiClient.post('/api/auth/
 export const resetPassword = async (token, password) => (await apiClient.post('/api/auth/reset-password', { token, password })).data;
 
 // Analysis Routes
+export const getDashboardStats = async () => (await apiClient.get('/api/analysis/dashboard')).data;
 export const getUserAnalyses = async () => (await apiClient.get('/api/analysis')).data;
 export const createAnalysis = async () => (await apiClient.post('/api/analysis/create')).data;
 export const getAnalysis = async (analysisId) => (await apiClient.get(`/api/analysis/${analysisId}`)).data;
@@ -38,4 +39,5 @@ export const generateCustomerSummary = async (analysisId) => (await apiClient.po
 export const checkHealth = async () => (await apiClient.get('/api/health')).data;
 
 export const askAssistant = async (message, context) => (await apiClient.post('/api/assistant', { message, context })).data;
+
 

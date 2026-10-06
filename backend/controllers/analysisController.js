@@ -1,4 +1,72 @@
-﻿exports.getUserAnalyses = (req, res) => {
+﻿exports.getDashboardStats = (req, res) => {
+  try {
+    const analyses = db.getAnalysesByUser(req.user.id);
+    const totalAnalyses = analyses.length;
+    const documents = analyses.filter(a => a.inputs && a.inputs.some(i => i.type === 'document')).length;
+    
+    const damageDetected = analyses.filter(a => {
+      if (!a.imageAnalysis) return false;
+      const damages = Array.isArray(a.imageAnalysis) 
+        ? a.imageAnalysis.flatMap(i => i.damage || []) 
+        : (a.imageAnalysis.damage || []);
+      return damages.length > 0;
+    }).length;
+
+    const confidences = [];
+    analyses.forEach(a => {
+      if (a.imageAnalysis && a.imageAnalysis.confidence) confidences.push(a.imageAnalysis.confidence);
+      else if (Array.isArray(a.imageAnalysis)) {
+        a.imageAnalysis.forEach(img => { if (img.confidence) confidences.push(img.confidence); });
+      }
+    });
+    const avgConfidence = confidences.length 
+      ? Math.round(confidences.reduce((acc, c) => acc + c, 0) / confidences.length * 100) 
+      : 0;
+
+    const recentAnalyses = analyses
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5)
+      .map(a => {
+        const findings = [];
+        if (a.imageAnalysis) {
+          const damages = Array.isArray(a.imageAnalysis) ? a.imageAnalysis.flatMap(i => i.damage || []) : (a.imageAnalysis.damage || []);
+          if (damages.length > 0) findings.push({ label: damages[0].type || 'Damage', level: damages[0].severity === 'High' ? 'High' : 'Medium' });
+        }
+        let statusString = 'Draft';
+        if (a.status === 'processed') statusString = 'Completed';
+        else if (a.status === 'processing') statusString = 'Processing';
+        else if (a.status === 'failed') statusString = 'Failed';
+
+        return {
+          id: a._id.substring(0,8).toUpperCase(),
+          originalId: a._id,
+          type: new Date(a.createdAt).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          status: statusString,
+          findings: findings,
+          image: a.inputs && a.inputs.some(i => i.type === 'image') ? 'true' : 'false'
+        };
+      });
+
+    res.json({
+      success: true,
+      data: {
+        totalAnalyses,
+        damageDetected,
+        documents,
+        aiConfidence: avgConfidence,
+        recentAnalyses,
+        usage: {
+          used: totalAnalyses,
+          limit: 100
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } });
+  }
+};
+
+exports.getUserAnalyses = (req, res) => {
   try { res.json({ success: true, data: db.getAnalysesByUser(req.user.id) }); }
   catch (error) { res.status(500).json({ success: false, error: { message: error.message } }); }
 };
@@ -365,6 +433,7 @@ exports.generateCustomerSummary = async (req, res) => {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } });
   }
 };
+
 
 
 
