@@ -51,6 +51,7 @@ export default function Results() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState(null);
+  const [shareText, setShareText] = useState('Share');
   const [summaryLoading, setSummaryLoading] = useState(false);
   
   // Chat state
@@ -114,6 +115,37 @@ export default function Results() {
   const { reasoning = {}, inputs = [], customerSummary, status, createdAt, imageAnalysis, documentAnalysis, audioAnalysis, textAnalysis } = data;
   const { correlations = [], contradictions = [], missingInformation = [], riskSignals = [], recommendations = [], overallAssessment = 'Analysis completed, but detailed reasoning was not generated.' } = reasoning;
 
+  
+  const handleDownloadJSON = () => {
+    if (!data) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `omnisense-analysis-${id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'OmniSense Analysis Results',
+          url: window.location.href
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setShareText('Copied!');
+        setTimeout(() => setShareText('Share'), 2000);
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
   const dateObj = new Date(createdAt);
 
   return (
@@ -133,14 +165,14 @@ export default function Results() {
           </div>
           <p className="text-slate-500 font-medium text-sm">Created {dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString()}</p>
         </div>
-        <div className="flex space-x-3">
-          <button className="bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center text-slate-700 shadow-sm hover:shadow-md">
+        <div className="flex space-x-3 print:hidden">
+          <button onClick={handleDownloadJSON} className="bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center text-slate-700 shadow-sm hover:shadow-md">
             <FileJson className="w-4 h-4 mr-2" /> JSON
           </button>
-          <button className="bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center text-slate-700 shadow-sm hover:shadow-md">
-            <Share2 className="w-4 h-4 mr-2" /> Share
+          <button onClick={handleShare} className="bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center text-slate-700 shadow-sm hover:shadow-md">
+            <Share2 className="w-4 h-4 mr-2" /> {shareText}
           </button>
-          <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all flex items-center shadow-[0_4px_15px_rgba(79,70,229,0.3)] hover:-translate-y-0.5">
+          <button onClick={() => window.print()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all flex items-center shadow-[0_4px_15px_rgba(79,70,229,0.3)] hover:-translate-y-0.5">
             <Download className="w-4 h-4 mr-2" /> Export PDF
           </button>
         </div>
