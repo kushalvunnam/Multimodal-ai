@@ -1,4 +1,4 @@
-const User = require('../models/User');
+﻿const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -44,7 +44,7 @@ exports.signup = async (req, res) => {
     const user = await User.create({ name: name.trim(), email: normalizedEmail, passwordHash });
 
     const token = generateToken(user._id, user.role);
-    setTokenCookie(res, token);
+    setTokenCookie(req, res, token);
 
     res.status(201).json({
       success: true,
@@ -75,7 +75,7 @@ exports.signin = async (req, res) => {
     await user.save();
 
     const token = generateToken(user._id, user.role);
-    setTokenCookie(res, token);
+    setTokenCookie(req, res, token);
 
     res.json({
       success: true,
@@ -155,3 +155,4 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, error: { message: 'Server error resetting password' } });
   }
 };
+

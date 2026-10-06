@@ -1,18 +1,20 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
 import { 
   User, Briefcase, GraduationCap, MapPin, UserCheck, 
   Edit, Save, X, Settings as SettingsIcon, AlertCircle, Wrench, FileText
 } from 'lucide-react';
 
 export default function Settings() {
+  const { user } = useAuth();
   const defaultProfile = {
-    name: 'Kushal Vunnam',
-    role: 'Frontend Developer',
+    name: user?.name || 'User',
+    role: 'User',
     education: 'B.Tech — Malla Reddy Vishwavidyapeeth',
-    location: 'Hyderabad, Telangana, India',
-    experience: 'Fresher',
-    skills: 'React.js, JavaScript, Python, SQL, HTML, CSS, Tailwind CSS, Node.js, Express.js, MongoDB',
-    summary: 'Frontend Developer and B.Tech student focused on building responsive, modern web applications using React.js, Tailwind CSS and JavaScript.'
+    location: '',
+    experience: '',
+    skills: '',
+    summary: ''
   };
 
   const [profile, setProfile] = useState(defaultProfile);
@@ -21,7 +23,7 @@ export default function Settings() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('omnisense_profile');
+    const saved = localStorage.getItem('omnisense_profile_' + (user?.id || 'default'));
     if (saved) {
       try {
         setProfile(JSON.parse(saved));
@@ -49,7 +51,7 @@ export default function Settings() {
       return;
     }
     setProfile(editForm);
-    localStorage.setItem('omnisense_profile', JSON.stringify(editForm));
+    localStorage.setItem('omnisense_profile_' + (user?.id || 'default'), JSON.stringify(editForm));
     setError('');
     setIsEditing(false);
   };
@@ -201,3 +203,10 @@ export default function Settings() {
     </div>
   );
 }
+
+
+
+
+
+
+

@@ -11,14 +11,30 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        console.log('[AUTH] checking current session');
         const res = await getCurrentUser();
         if (res.success && res.data.user) {
+          console.log(`[AUTH] session restored for user: ${res.data.user.id || res.data.user._id}`);
           setUser(res.data.user);
           setIsAuthenticated(true);
+        } else {
+          console.log('[AUTH] session not authenticated');
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (err) {
-        setUser(null);
-        setIsAuthenticated(false);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          console.log('[AUTH] session not authenticated (401/403)');
+          setUser(null);
+          setIsAuthenticated(false);
+        } else {
+          console.log('[AUTH] network failure or server error during session check');
+          // Don't treat a 500/503 network error as explicitly logged out if we don't know yet.
+          // However, if we leave them in loading forever it's a bad UX.
+          // For now, we will assume not authenticated but log it appropriately.
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -60,3 +76,4 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
