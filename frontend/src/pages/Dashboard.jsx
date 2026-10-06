@@ -11,19 +11,48 @@ import AssistantModal from '../components/AssistantModal';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   
+  const [dashboardData, setDashboardData] = useState({
+    totalAnalyses: 0,
+    damageDetected: 0,
+    documents: 0,
+    aiConfidence: 0,
+    recentAnalyses: []
+  });
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchDashboard = async () => {
+      try {
+        const res = await getDashboardStats();
+        if (mounted && res?.success) {
+          setDashboardData(res.data);
+          setError(false);
+        } else if (mounted) {
+          setError(true);
+        }
+      } catch (err) {
+        if (mounted) setError(true);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    fetchDashboard();
+    return () => { mounted = false; };
+  }, []);
+
   const stats = [
-    { label: 'Total Analyses', value: '24', icon: Activity, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '+12%' },
-    { label: 'Damage Detected', value: '12', icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50', trend: '-8%' },
-    { label: 'Documents', value: '18', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50', trend: '+24%' },
-    { label: 'AI Confidence', value: '94%', icon: BrainCircuit, color: 'text-emerald-500', bg: 'bg-emerald-50', trend: '+5%' },
+    { label: 'Total Analyses', value: loading ? '-' : dashboardData.totalAnalyses.toString(), icon: Activity, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '' },
+    { label: 'Damage Detected', value: loading ? '-' : dashboardData.damageDetected.toString(), icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50', trend: '' },
+    { label: 'Documents', value: loading ? '-' : dashboardData.documents.toString(), icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50', trend: '' },
+    { label: 'AI Confidence', value: loading ? '-' : (dashboardData.aiConfidence > 0 ? `${dashboardData.aiConfidence}%` : '--'), icon: BrainCircuit, color: 'text-emerald-500', bg: 'bg-emerald-50', trend: '' },
   ];
 
-  const recent = [
-    { id: 'BFDB7B32', type: 'Oct 6, 2026 • 6:24 PM', status: 'Completed', findings: [{label: 'Front Bumper', level: 'High'}], image: 'true' },
-    { id: 'A8C1D9F0', type: 'Oct 5, 2026 • 11:12 AM', status: 'Completed', findings: [{label: 'Headlight', level: 'Medium'}], image: 'true' },
-  ];
+  const recent = dashboardData.recentAnalyses || [];
 
   return (
     <div className="space-y-8 relative max-w-7xl mx-auto">
