@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { checkHealth } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
-export default function Navbar() {
+export default function Navbar({ onMenuClick }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null); // 'ai', 'notifications', 'profile', null
@@ -73,11 +73,19 @@ export default function Navbar() {
   };
 
   return (
-    <header className="h-20 flex items-center justify-between px-8 z-50 backdrop-blur-md bg-white/50 border-b border-white/20 sticky top-0">
+    <header className="h-20 flex items-center justify-between px-4 md:px-8 z-50 backdrop-blur-md bg-white/50 border-b border-white/20 sticky top-0">
+      
+        <button 
+          onClick={onMenuClick}
+          className="lg:hidden mr-4 p-2 rounded-xl bg-white border border-gray-100 text-gray-500 hover:text-primary hover:bg-gray-50"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
       
       {/* SEARCH */}
       <div className="relative z-50" ref={searchRef}>
-        <form onSubmit={handleSearchSubmit} className="flex items-center bg-white/80 rounded-full px-4 py-2.5 w-80 border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
+        <form onSubmit={handleSearchSubmit} className="flex items-center bg-white/80 rounded-full px-4 py-2.5 w-full md:w-80 border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
           <Search className="w-4 h-4 text-gray-400 mr-2" />
           <input 
             type="text" 

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { getDashboardStats } from '../../services/api';
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const [usage, setUsage] = useState({ used: 0, limit: 100 });
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
-            <NavLink
+            <NavLink onClick={() => setMobileOpen && setMobileOpen(false)} onClick={() => setMobileOpen && setMobileOpen(false)}
               key={item.name}
               to={item.path}
               end={item.path === '/dashboard'}

@@ -50,7 +50,7 @@ exports.signup = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: { user: { id: user._id, name: user.name, email: user.email, role: user.role } }
+      token, user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
     console.error('Signup Error:', error);
@@ -81,7 +81,7 @@ exports.signin = async (req, res) => {
 
     res.json({
       success: true,
-      data: { user: { id: user._id, name: user.name, email: user.email, role: user.role } }
+      token, user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
     console.error('Signin Error:', error);
@@ -159,6 +159,7 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, error: { message: 'Server error resetting password' } });
   }
 };
+
 
 
 

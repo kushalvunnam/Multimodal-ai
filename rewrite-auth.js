@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+const fs = require('fs');
+let auth = fs.readFileSync('frontend/src/context/AuthContext.jsx', 'utf8');
+
+auth = `import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getCurrentUser, signin, signup as apiSignup, signout } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -75,3 +78,6 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+`;
+
+fs.writeFileSync('frontend/src/context/AuthContext.jsx', auth);
