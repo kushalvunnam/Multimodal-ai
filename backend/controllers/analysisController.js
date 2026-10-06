@@ -38,7 +38,7 @@
         else if (a.status === 'failed') statusString = 'Failed';
 
         return {
-          id: a._id.substring(0,8).toUpperCase(),
+          id: a._id.toString().substring(0,8).toUpperCase(),
           originalId: a._id,
           type: new Date(a.createdAt).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
           status: statusString,
