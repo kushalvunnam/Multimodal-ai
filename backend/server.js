@@ -23,17 +23,29 @@ const allowedOrigins = [
   'http://localhost:5174'
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow the production Vercel domain, Vercel preview deployments, and local dev.
-    if (!origin || allowedOrigins.includes(origin) || /^https:\/\/multimodal-ai(?:-[a-z0-9-]+)?\.vercel\.app$/.test(origin)) {
+    if (!origin) return callback(null, true);
+
+    const isAllowed = 
+      allowedOrigins.includes(origin) || 
+      /^https:\/\/multimodal-ai(?:-[a-z0-9-]+)?\.vercel\.app$/.test(origin) ||
+      /^https:\/\/[a-zA-Z0-9-]+--[a-zA-Z0-9-]+\.netlify\.app$/.test(origin) ||
+      /^https:\/\/[a-zA-Z0-9-]+\.netlify\.app$/.test(origin);
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
-}));
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -56,5 +68,7 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
+
 
 

@@ -11,8 +11,8 @@ const generateToken = (userId, role) => {
 
 const setTokenCookie = (req, res, token) => {
   const origin = req.get ? req.get('origin') : '';
-  const isVercel = origin && origin.includes('vercel.app');
-  const secureCookie = isVercel || process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
+  const isCrossSite = origin && (origin.includes('vercel.app') || origin.includes('netlify.app'));
+  const secureCookie = isCrossSite || process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
   res.cookie('token', token, {
     httpOnly: true,
     secure: secureCookie,
@@ -91,8 +91,8 @@ exports.signin = async (req, res) => {
 
 exports.signout = (req, res) => {
   const origin = req.get ? req.get('origin') : '';
-  const isVercel = origin && origin.includes('vercel.app');
-  const secureCookie = isVercel || process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
+  const isCrossSite = origin && (origin.includes('vercel.app') || origin.includes('netlify.app'));
+  const secureCookie = isCrossSite || process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
   res.cookie('token', 'none', {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
@@ -159,6 +159,7 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, error: { message: 'Server error resetting password' } });
   }
 };
+
 
 
 
