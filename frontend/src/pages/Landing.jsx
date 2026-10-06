@@ -3,7 +3,8 @@ import { Box, ArrowRight, Image as ImageIcon, FileText, Mic, AlignLeft } from 'l
 import { motion } from 'framer-motion';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, MeshDistortMaterial, Sphere, Environment, ContactShadows } from '@react-three/drei';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import ProductDemoModal from '../components/ProductDemoModal';
 
 function AICore() {
   const meshRef = useRef();
@@ -234,4 +235,5 @@ export default function Landing() {
     </div>
   );
 }
+
 
