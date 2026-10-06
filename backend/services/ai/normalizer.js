@@ -75,4 +75,5 @@ const normalizeResponse = (rawResponse, type) => {
   }
 };
 
-module.exports = { normalizeResponse };
+module.exports = { normalizeResponse, extractJson };
+

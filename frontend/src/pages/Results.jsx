@@ -104,7 +104,7 @@ export default function Results() {
   if (loading) return <div className="min-h-[60vh] flex flex-col items-center justify-center text-indigo-600"><Loader2 className="w-10 h-10 animate-spin mb-4" /> Loading AI Results...</div>;
   if (!data || !data.reasoning) return <div className="p-10 text-center text-red-500 font-bold">Analysis not found or still processing.</div>;
 
-  const { reasoning, inputs, customerSummary, status, createdAt } = data;
+  const { reasoning, inputs, customerSummary, status, createdAt, imageAnalysis, documentAnalysis, audioAnalysis, textAnalysis } = data;
   const { correlations = [], contradictions = [], missingInformation = [], riskSignals = [], recommendations = [], overallAssessment } = reasoning;
   const dateObj = new Date(createdAt);
 
@@ -177,6 +177,52 @@ export default function Results() {
           </div>
         </div>
       </div>
+
+      {/* 3.5 DETECTED ISSUES & FINDINGS */}
+      {(imageAnalysis?.damage?.length > 0 || documentAnalysis?.potentialInconsistencies?.length > 0) && (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-extrabold text-slate-900 flex items-center justify-center mb-2">
+              <AlertTriangle className="w-6 h-6 mr-3 text-rose-500" /> Detected Issues & Findings
+            </h2>
+            <p className="text-slate-500 font-medium">Specific evidence extracted from raw inputs.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {imageAnalysis?.damage?.map((dmg, i) => (
+              <div key={`img-dmg-${i}`} className="bg-white border border-rose-100 rounded-3xl p-6 shadow-sm flex flex-col relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-2 h-full bg-rose-500"></div>
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-bold text-slate-800 text-lg flex items-center">
+                    <ImageIcon className="w-5 h-5 mr-2 text-rose-500" /> {dmg.area || "Vehicle Damage"}
+                  </h3>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${dmg.severity === 'high' || dmg.severity === 'critical' ? 'bg-rose-100 text-rose-700' : dmg.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
+                    {dmg.severity ? dmg.severity.toUpperCase() : "UNKNOWN"} SEVERITY
+                  </span>
+                </div>
+                <p className="text-slate-600 font-medium text-sm flex-1">{dmg.description}</p>
+                {dmg.confidence && <div className="mt-4 text-xs font-bold text-slate-400">AI Confidence: {Math.round(dmg.confidence * 100)}%</div>}
+              </div>
+            ))}
+
+            {documentAnalysis?.potentialInconsistencies?.map((inc, i) => (
+              <div key={`doc-inc-${i}`} className="bg-white border border-amber-100 rounded-3xl p-6 shadow-sm flex flex-col relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-2 h-full bg-amber-500"></div>
+                <h3 className="font-bold text-slate-800 text-lg flex items-center mb-3">
+                  <FileText className="w-5 h-5 mr-2 text-amber-500" /> Document Flag
+                </h3>
+                <p className="text-slate-600 font-medium text-sm flex-1">{inc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {imageAnalysis && (!imageAnalysis.damage || imageAnalysis.damage.length === 0) && (
+        <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm text-center">
+          <p className="text-slate-500 font-bold flex items-center justify-center"><CheckCircle className="w-5 h-5 mr-2 text-emerald-500" /> No visible damage detected from the provided evidence.</p>
+        </div>
+      )}
 
       {/* 4. CROSS-MODAL FINDINGS (HERO) */}
       <div className="space-y-6">
@@ -366,4 +412,5 @@ export default function Results() {
     </div>
   );
 }
+
 
