@@ -123,18 +123,20 @@ export default function SignIn() {
             <pointLight position={[0, 0, 0]} intensity={2} color="#c084fc" />
             
             <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
-              <GlassCore />
+              <group position={[1.5, 0, 0]}>
+                <GlassCore />
+              </group>
             </Float>
             <Environment preset="city" />
           </Canvas>
         </div>
 
         {/* Floating Modality Cards over the 3D Canvas */}
-        <div className="absolute inset-0 z-10 pointer-events-none hidden md:block">
+        <div className="absolute top-0 bottom-0 right-0 w-[55%] z-10 pointer-events-none hidden lg:block">
           
           <motion.div 
             animate={{ x: mousePosition.x * 1.5, y: mousePosition.y * 1.5 + Math.sin(Date.now() / 1000) * 10 }}
-            className="absolute top-[20%] left-[15%] bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.08)] flex items-center space-x-3 pointer-events-auto hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(79,70,229,0.15)] hover:border-purple-200 transition-all duration-300 group"
+            className="absolute top-[20%] left-[10%] bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.08)] flex items-center space-x-3 pointer-events-auto hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(79,70,229,0.15)] hover:border-purple-200 transition-all duration-300 group"
           >
             <div className="bg-indigo-50 p-2.5 rounded-xl group-hover:bg-indigo-100 transition-colors shadow-inner"><ImageIcon className="w-5 h-5 text-indigo-600 group-hover:drop-shadow-md" /></div>
             <div>
@@ -145,7 +147,7 @@ export default function SignIn() {
 
           <motion.div 
             animate={{ x: mousePosition.x * -1, y: mousePosition.y * -1 + Math.cos(Date.now() / 1200) * 8 }}
-            className="absolute top-[25%] right-[15%] bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.08)] flex items-center space-x-3 pointer-events-auto hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(79,70,229,0.15)] hover:border-purple-200 transition-all duration-300 group"
+            className="absolute top-[30%] right-[5%] bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.08)] flex items-center space-x-3 pointer-events-auto hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(79,70,229,0.15)] hover:border-purple-200 transition-all duration-300 group"
           >
             <div className="bg-purple-50 p-2.5 rounded-xl group-hover:bg-purple-100 transition-colors shadow-inner"><FileText className="w-5 h-5 text-purple-600 group-hover:drop-shadow-md" /></div>
             <div>
@@ -156,7 +158,7 @@ export default function SignIn() {
 
           <motion.div 
             animate={{ x: mousePosition.x * 1.2, y: mousePosition.y * 1.2 + Math.sin(Date.now() / 1500) * 12 }}
-            className="absolute bottom-[25%] left-[20%] bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.08)] flex items-center space-x-3 pointer-events-auto hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(79,70,229,0.15)] hover:border-purple-200 transition-all duration-300 group"
+            className="absolute bottom-[40%] left-[5%] bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.08)] flex items-center space-x-3 pointer-events-auto hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(79,70,229,0.15)] hover:border-purple-200 transition-all duration-300 group"
           >
             <div className="bg-emerald-50 p-2.5 rounded-xl group-hover:bg-emerald-100 transition-colors shadow-inner"><Mic className="w-5 h-5 text-emerald-600 group-hover:drop-shadow-md" /></div>
             <div>
@@ -167,7 +169,7 @@ export default function SignIn() {
 
           <motion.div 
             animate={{ x: mousePosition.x * -1.5, y: mousePosition.y * -1.5 + Math.cos(Date.now() / 1100) * 9 }}
-            className="absolute bottom-[20%] right-[20%] bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.08)] flex items-center space-x-3 pointer-events-auto hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(79,70,229,0.15)] hover:border-purple-200 transition-all duration-300 group"
+            className="absolute bottom-[25%] right-[15%] bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.08)] flex items-center space-x-3 pointer-events-auto hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(79,70,229,0.15)] hover:border-purple-200 transition-all duration-300 group"
           >
             <div className="bg-blue-50 p-2.5 rounded-xl group-hover:bg-blue-100 transition-colors shadow-inner"><AlignLeft className="w-5 h-5 text-blue-600 group-hover:drop-shadow-md" /></div>
             <div>
@@ -185,7 +187,7 @@ export default function SignIn() {
           </div>
         </div>
 
-        <div className="absolute bottom-12 left-12 z-20 hidden lg:block max-w-lg pointer-events-none">
+        <div className="absolute top-1/2 -translate-y-1/2 left-8 xl:left-12 z-30 hidden lg:block max-w-md xl:max-w-lg pointer-events-none">
           <span className="inline-block px-3 py-1 bg-white/60 backdrop-blur border border-white/80 rounded-lg text-xs font-black tracking-widest text-indigo-600 uppercase mb-4 shadow-sm">
             OmniSense Intelligence Engine
           </span>
@@ -290,3 +292,5 @@ export default function SignIn() {
     </div>
   );
 }
+
+
