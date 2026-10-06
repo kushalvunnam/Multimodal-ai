@@ -1,9 +1,71 @@
-﻿import { useState } from 'react';
+﻿import { useState, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Sphere, Torus, Float, Environment } from '@react-three/drei';
+import * as THREE from 'three';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Activity, ImageIcon, FileText, AlertTriangle, ArrowRight, CheckCircle, Clock, Plus, BarChart2, ScanLine, Mic, BrainCircuit, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AssistantModal from '../components/AssistantModal';
+
+function DashboardAICore() {
+  const groupRef = useRef();
+
+  useFrame((state) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = state.clock.elapsedTime * 0.15;
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Outer Glass Shell */}
+      <Sphere args={[2.0, 64, 64]}>
+        <meshPhysicalMaterial 
+          transmission={1} 
+          opacity={1} 
+          roughness={0.05} 
+          ior={1.15} 
+          thickness={1.5} 
+          color="#f5f3ff" 
+          clearcoat={1} 
+          clearcoatRoughness={0.1}
+        />
+      </Sphere>
+      
+      {/* Inner Glowing Core */}
+      <Sphere args={[1.0, 32, 32]}>
+        <meshStandardMaterial 
+          color="#d8b4fe" 
+          emissive="#8b5cf6" 
+          emissiveIntensity={1.5} 
+          roughness={0.4}
+          wireframe={true}
+        />
+      </Sphere>
+      
+      <Sphere args={[0.5, 32, 32]}>
+        <meshStandardMaterial 
+          color="#ffffff" 
+          emissive="#c084fc" 
+          emissiveIntensity={2} 
+        />
+      </Sphere>
+
+      {/* Orbital Rings */}
+      <Torus args={[2.8, 0.015, 16, 100]} rotation={[Math.PI / 3, 0, 0]}>
+        <meshBasicMaterial color="#a78bfa" transparent opacity={0.6} />
+      </Torus>
+      <Torus args={[3.5, 0.015, 16, 100]} rotation={[-Math.PI / 4, Math.PI / 6, 0]}>
+        <meshBasicMaterial color="#818cf8" transparent opacity={0.4} />
+      </Torus>
+      <Torus args={[4.2, 0.015, 16, 100]} rotation={[0, Math.PI / 3, Math.PI / 8]}>
+        <meshBasicMaterial color="#60a5fa" transparent opacity={0.3} />
+      </Torus>
+    </group>
+  );
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -52,32 +114,37 @@ export default function Dashboard() {
 
         {/* Hero Right Visualization */}
         <div className="lg:w-1/2 relative z-10 flex justify-center items-center h-[300px] lg:h-[400px] w-full">
-          {/* Central 3D Vehicle representation */}
-          <div className="relative w-64 h-32 bg-gradient-to-br from-slate-100 to-slate-200 rounded-[5rem] shadow-2xl flex items-center justify-center border border-white">
-            <div className="absolute w-40 h-16 bg-white/80 backdrop-blur-sm rounded-t-3xl -top-12 border border-white/50 shadow-sm"></div>
-            <div className="absolute -bottom-6 left-8 w-14 h-14 bg-slate-800 rounded-full border-4 border-slate-200 shadow-lg"></div>
-            <div className="absolute -bottom-6 right-8 w-14 h-14 bg-slate-800 rounded-full border-4 border-slate-200 shadow-lg"></div>
-            {/* Scanner line */}
-            <motion.div animate={{ x: [-80, 80, -80] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="absolute w-2 h-32 bg-indigo-500 rounded-full blur-[2px] shadow-[0_0_20px_#4f46e5] opacity-60"></motion.div>
+          {/* Central 3D AI Core representation */}
+          <div className="absolute inset-0 z-0">
+            <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
+              <ambientLight intensity={1.5} />
+              <directionalLight position={[5, 10, 5]} intensity={2} color="#ffffff" />
+              <directionalLight position={[-5, -10, -5]} intensity={1} color="#e0e7ff" />
+              <pointLight position={[0, 0, 0]} intensity={2} color="#c084fc" />
+              <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
+                <DashboardAICore />
+              </Float>
+              <Environment preset="city" />
+            </Canvas>
           </div>
 
           {/* Floating UI Nodes */}
-          <motion.div animate={{ y: [-5, 5, -5] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute top-10 left-0 bg-white/90 backdrop-blur-md border border-slate-100 p-3 rounded-2xl shadow-xl flex items-center space-x-3">
+          <motion.div animate={{ y: [-5, 5, -5] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[10%] left-[10%] bg-white/90 backdrop-blur-md border border-slate-100 p-3 rounded-2xl shadow-xl flex items-center space-x-3">
             <div className="bg-indigo-50 p-2.5 rounded-xl"><ScanLine className="w-5 h-5 text-indigo-600" /></div>
             <div><p className="text-xs font-bold text-slate-800 leading-tight">Image Analysis</p><p className="text-[10px] text-slate-500 font-medium">Detect damage</p></div>
           </motion.div>
 
-          <motion.div animate={{ y: [5, -5, 5] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute top-4 right-0 bg-white/90 backdrop-blur-md border border-slate-100 p-3 rounded-2xl shadow-xl flex items-center space-x-3">
+          <motion.div animate={{ y: [5, -5, 5] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[15%] right-[5%] bg-white/90 backdrop-blur-md border border-slate-100 p-3 rounded-2xl shadow-xl flex items-center space-x-3">
             <div className="bg-purple-50 p-2.5 rounded-xl"><FileText className="w-5 h-5 text-purple-600" /></div>
             <div><p className="text-xs font-bold text-slate-800 leading-tight">Document Intel</p><p className="text-[10px] text-slate-500 font-medium">Read & extract data</p></div>
           </motion.div>
 
-          <motion.div animate={{ y: [-4, 4, -4] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-16 right-0 bg-white/90 backdrop-blur-md border border-slate-100 p-3 rounded-2xl shadow-xl flex items-center space-x-3">
+          <motion.div animate={{ y: [-4, 4, -4] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[20%] right-[10%] bg-white/90 backdrop-blur-md border border-slate-100 p-3 rounded-2xl shadow-xl flex items-center space-x-3">
             <div className="bg-blue-50 p-2.5 rounded-xl"><Mic className="w-5 h-5 text-blue-600" /></div>
             <div><p className="text-xs font-bold text-slate-800 leading-tight">Audio Transcription</p><p className="text-[10px] text-slate-500 font-medium">Convert to text</p></div>
           </motion.div>
 
-          <motion.div animate={{ y: [4, -4, 4] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md border border-slate-100 p-3 rounded-2xl shadow-xl flex items-center space-x-3">
+          <motion.div animate={{ y: [4, -4, 4] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[15%] left-[5%] bg-white/90 backdrop-blur-md border border-slate-100 p-3 rounded-2xl shadow-xl flex items-center space-x-3">
             <div className="bg-cyan-50 p-2.5 rounded-xl"><BrainCircuit className="w-5 h-5 text-cyan-600" /></div>
             <div><p className="text-xs font-bold text-slate-800 leading-tight">AI Reasoning</p><p className="text-[10px] text-slate-500 font-medium">Cross-modal insights</p></div>
           </motion.div>
@@ -141,7 +208,7 @@ export default function Dashboard() {
               
               <div className="flex items-center space-x-5 mb-4 sm:mb-0">
                 <div className="w-16 h-12 bg-slate-200 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                  <Car className="w-6 h-6 text-slate-400" />
+                  <BrainCircuit className="w-6 h-6 text-slate-400" />
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{item.id}</h4>
@@ -173,3 +240,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
