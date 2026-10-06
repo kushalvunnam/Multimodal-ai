@@ -57,9 +57,9 @@ export default function Sidebar() {
             <p className="text-sm font-bold text-text-main mb-1">OmniSense Pro</p>
             <p className="text-xs text-text-muted mb-3">Enterprise limits active</p>
             <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1.5 overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} transition={{ duration: 1, delay: 0.5 }} className="bg-gradient-to-r from-primary to-accent h-full rounded-full" />
+              <motion.div initial={{ width: 0 }} animate={{ width: `${capacityPercent}%` }} transition={{ duration: 1, delay: 0.5 }} className="bg-gradient-to-r from-primary to-accent h-full rounded-full" />
             </div>
-            <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">65% Capacity</p>
+            <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">{capacityPercent}% Capacity</p>
           </div>
         </div>
       </div>
