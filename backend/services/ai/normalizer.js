@@ -6,7 +6,6 @@
     return parsed;
   } catch (e) {}
 
-  // Remove markdown fences
   const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (match && match[1]) {
     try {
@@ -14,7 +13,6 @@
     } catch (err) {}
   }
   
-  // Find first { and last }
   const firstBrace = text.indexOf('{');
   const lastBrace = text.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -42,21 +40,36 @@ const normalizeResponse = (rawResponse, type) => {
     const data = extractJson(rawResponse);
     
     if (type === 'image') {
-      const damages = data.damage || data.damages || data.findings || data.detected_damage || [];
+      console.log('\n[PARSED RESPONSE]');
+      console.log(`parsed JSON:`, JSON.stringify(data, null, 2));
+
+      let damages = data.damage || data.damages || data.findings || data.detected_damage;
+      if (!damages && data.imageAnalysis) {
+         damages = data.imageAnalysis.damage || data.imageAnalysis.damages || data.imageAnalysis.findings || [];
+      }
+      damages = damages || [];
       
       const normalizedDamages = Array.isArray(damages) ? damages.map(d => ({
-        area: d.area || d.location || 'Unknown area',
+        area: d.area || d.location || d.type || 'Unknown area',
         severity: d.severity || 'Medium',
         description: d.description || d.details || 'No description provided',
         confidence: normalizeConfidence(d.confidence)
       })) : [];
 
-      return {
+      const result = {
         vehicle: data.vehicle || { type: null, make: null, model: null },
         damage: normalizedDamages,
         imageQuality: data.imageQuality || 'unknown',
-        confidence: normalizeConfidence(data.confidence)
+        confidence: normalizeConfidence(data.confidence),
+        _raw: rawResponse
       };
+
+      console.log('\n[NORMALIZED RESPONSE]');
+      console.log(`imageAnalysis:`, Object.keys(result));
+      console.log(`damage:`, JSON.stringify(result.damage));
+      console.log(`damage count: ${result.damage.length}\n`);
+
+      return result;
     }
     
     if (type === 'document') {
@@ -102,4 +115,3 @@ const normalizeResponse = (rawResponse, type) => {
 };
 
 module.exports = { normalizeResponse, extractJson, normalizeConfidence };
-
