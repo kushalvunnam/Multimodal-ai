@@ -20,7 +20,8 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Allow the production Vercel domain, Vercel preview deployments, and local dev.
+    if (!origin || allowedOrigins.includes(origin) || /^https:\/\/multimodal-ai(?:-[a-z0-9-]+)?\.vercel\.app$/.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
