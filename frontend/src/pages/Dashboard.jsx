@@ -1,8 +1,8 @@
 ﻿import { useState, useRef, useEffect } from 'react';
 import { getDashboardStats } from '../services/api';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Sphere, Torus, Float, Environment } from '@react-three/drei';
-import * as THREE from 'three';
+
+
+
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Activity, ImageIcon, FileText, AlertTriangle, ArrowRight, CheckCircle, Clock, Plus, BarChart2, ScanLine, Mic, BrainCircuit, Car } from 'lucide-react';
@@ -46,13 +46,13 @@ export default function Dashboard() {
   }, []);
 
   const stats = [
-    { label: 'Total Analyses', value: loading ? '-' : dashboardData.totalAnalyses.toString(), icon: Activity, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '' },
-    { label: 'Damage Detected', value: loading ? '-' : dashboardData.damageDetected.toString(), icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50', trend: '' },
-    { label: 'Documents', value: loading ? '-' : dashboardData.documents.toString(), icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50', trend: '' },
-    { label: 'AI Confidence', value: loading ? '-' : (dashboardData.aiConfidence > 0 ? `${dashboardData.aiConfidence}%` : '--'), icon: BrainCircuit, color: 'text-emerald-500', bg: 'bg-emerald-50', trend: '' },
+    { label: 'Total Analyses', value: loading ? '-' : (dashboardData?.totalAnalyses || 0).toString(), icon: Activity, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '' },
+    { label: 'Damage Detected', value: loading ? '-' : (dashboardData?.damageDetected || 0).toString(), icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50', trend: '' },
+    { label: 'Documents', value: loading ? '-' : (dashboardData?.documents || 0).toString(), icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50', trend: '' },
+    { label: 'AI Confidence', value: loading ? '-' : ((dashboardData?.aiConfidence > 0) ? `${dashboardData.aiConfidence}%` : '--'), icon: BrainCircuit, color: 'text-emerald-500', bg: 'bg-emerald-50', trend: '' },
   ];
 
-  const recent = dashboardData.recentAnalyses || [];
+  const recent = dashboardData?.recentAnalyses || [];
 
   return (
     <div className="space-y-8 relative max-w-7xl mx-auto">
@@ -233,7 +233,7 @@ export default function Dashboard() {
 
               <div className="flex items-center space-x-3 sm:space-x-6">
                 <div className="flex flex-wrap gap-2">
-                  {item.findings.map((finding, idx) => (
+                  {(item?.findings || []).map((finding, idx) => (
                     <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-white border border-slate-200 text-slate-600 shadow-sm">
                       <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${finding.level === 'High' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
                       {finding.label}

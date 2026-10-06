@@ -21,7 +21,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
     return () => { mounted = false; };
   }, []);
 
-  const capacityPercent = Math.min(100, Math.round((usage.used / usage.limit) * 100)) || 0;
+  const capacityPercent = Math.min(100, Math.round(((usage?.used || 0) / (usage?.limit || 100)) * 100)) || 0;
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -46,7 +46,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
-            <NavLink onClick={() => setMobileOpen && setMobileOpen(false)} onClick={() => setMobileOpen && setMobileOpen(false)}
+            <NavLink onClick={() => setMobileOpen && setMobileOpen(false)}
               key={item.name}
               to={item.path}
               end={item.path === '/dashboard'}
