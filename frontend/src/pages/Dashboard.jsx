@@ -1,8 +1,9 @@
-﻿import { useState, useRef } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
+import { getUserAnalyses } from '../services/api';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere, Torus, Float, Environment } from '@react-three/drei';
 import * as THREE from 'three';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Activity, ImageIcon, FileText, AlertTriangle, ArrowRight, CheckCircle, Clock, Plus, BarChart2, ScanLine, Mic, BrainCircuit, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -203,8 +204,24 @@ export default function Dashboard() {
         </div>
 
         <div className="space-y-4">
-          {recent.map((item, i) => (
-            <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border border-slate-100 hover:border-indigo-100 hover:shadow-md transition-all bg-slate-50/50 group cursor-pointer">
+          {loading ? (
+            <div className="text-center py-10 text-slate-500 text-sm font-medium">Loading workspace...</div>
+          ) : recent.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-slate-100">
+                <Activity className="w-8 h-8 text-indigo-400" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">No analyses yet</h3>
+              <p className="text-slate-500 text-sm max-w-sm text-center mb-6">
+                Your multimodal intelligence workspace is ready. Upload an image, document, audio file, or text to create your first analysis.
+              </p>
+              <Link to="/analysis/new" className="inline-flex items-center justify-center px-6 py-3 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-indigo-600 transition-colors shadow-lg">
+                <Plus className="w-4 h-4 mr-2" /> Create New Analysis
+              </Link>
+            </div>
+          ) : (
+            recent.map((item, i) => (
+            <div key={i} onClick={() => navigate(`/analysis/${item.originalId}`)} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border border-slate-100 hover:border-indigo-100 hover:shadow-md transition-all bg-slate-50/50 group cursor-pointer">
               
               <div className="flex items-center space-x-5 mb-4 sm:mb-0">
                 <div className="w-16 h-12 bg-slate-200 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
@@ -233,11 +250,14 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
 
     </div>
   );
 }
+
+
 
