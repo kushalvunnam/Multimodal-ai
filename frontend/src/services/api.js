@@ -1,6 +1,12 @@
 ﻿import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://multimodal-ai-b0xm.onrender.com';
+let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+// If undefined, or accidentally set to localhost in a production Vercel build, force the correct Render URL
+if (!API_BASE_URL || (import.meta.env.PROD && API_BASE_URL.includes('localhost'))) {
+  API_BASE_URL = import.meta.env.PROD ? 'https://multimodal-ai-b0xm.onrender.com' : 'http://localhost:5000';
+}
+
 const apiClient = axios.create({ baseURL: API_BASE_URL });
 
 export const createAnalysis = async () => (await apiClient.post('/api/analysis/create')).data;
