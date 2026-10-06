@@ -102,3 +102,4 @@ const normalizeResponse = (rawResponse, type) => {
 };
 
 module.exports = { normalizeResponse, extractJson, normalizeConfidence };
+
