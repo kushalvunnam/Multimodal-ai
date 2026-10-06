@@ -1,7 +1,10 @@
-﻿import { Download, Copy, Share2, AlertTriangle, CheckCircle, ShieldAlert, Zap, Target, Image as ImageIcon, FileText, Mic, Send, Sparkles, ArrowDown } from 'lucide-react';
-import { motion } from 'framer-motion';
+﻿import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
+import { Download, Share2, AlertTriangle, CheckCircle, ShieldAlert, Target, Image as ImageIcon, FileText, Mic, Send, Sparkles, ChevronDown, ChevronUp, Brain, Info, ArrowRight, ArrowDown, Loader2, FileJson } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { Float, Sphere, MeshDistortMaterial } from '@react-three/drei';
+import { getAnalysis, sendChatMessage, generateCustomerSummary } from '../services/api';
 
 function TinyAICore() {
   return (
@@ -13,26 +16,120 @@ function TinyAICore() {
   );
 }
 
-export default function Results() {
+const EvidencePanel = ({ details }) => {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="max-w-6xl mx-auto space-y-10 pb-32">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="mt-3 text-sm">
+      <button onClick={() => setOpen(!open)} className="text-indigo-600 font-bold flex items-center hover:text-indigo-800 transition-colors">
+        {open ? <ChevronUp className="w-4 h-4 mr-1" /> : <ChevronDown className="w-4 h-4 mr-1" />}
+        View Evidence
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="mt-2 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <p className="font-medium text-slate-800"><span className="text-xs font-black tracking-widest text-slate-400 block mb-1">AI REASONING</span> {details.assessment || details.explanation || details.reason}</p>
+              <div className="text-xs font-mono text-slate-600 bg-white p-3 rounded-lg border border-slate-100 shadow-inner">
+                <div className="mb-2"><strong className="text-indigo-600">SOURCES:</strong> {details.sources?.join(', ') || 'N/A'}</div>
+                {details.evidence && (
+                  <div className="mb-1"><strong className="text-slate-800">EVIDENCE:</strong> {details.evidence.join(' | ')}</div>
+                )}
+                {details.values && (
+                  <div className="mb-1"><strong className="text-slate-800">VALUES DETECTED:</strong> {details.values.join(' vs ')}</div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default function Results() {
+  const { id } = useParams();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  
+  // Chat state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState([{ role: 'ai', content: "I'm ready to answer questions about this analysis." }]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const res = await getAnalysis(id);
+        if (res.success) {
+          setData(res.data);
+          if (res.data.chatHistory?.length > 0) setMessages(res.data.chatHistory);
+        }
+      } catch (err) { console.error(err); } 
+      finally { setLoading(false); }
+    };
+    if (id) loadData();
+  }, [id]);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, chatOpen]);
+
+  const handleSendChat = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+    const msg = chatInput.trim();
+    setChatInput('');
+    setMessages(prev => [...prev, { role: 'user', content: msg }]);
+    setChatLoading(true);
+    try {
+      const res = await sendChatMessage(id, msg);
+      if (res.success) setMessages(prev => [...prev, { role: 'ai', content: res.data.message }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'ai', content: "I couldn't process that request right now." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const res = await generateCustomerSummary(id);
+      if (res.success) setData(prev => ({ ...prev, customerSummary: res.data.summary }));
+    } catch (err) { console.error(err); }
+    finally { setSummaryLoading(false); }
+  };
+
+  if (loading) return <div className="min-h-[60vh] flex flex-col items-center justify-center text-indigo-600"><Loader2 className="w-10 h-10 animate-spin mb-4" /> Loading AI Results...</div>;
+  if (!data || !data.reasoning) return <div className="p-10 text-center text-red-500 font-bold">Analysis not found or still processing.</div>;
+
+  const { reasoning, inputs, customerSummary, status, createdAt } = data;
+  const { correlations = [], contradictions = [], missingInformation = [], riskSignals = [], recommendations = [], overallAssessment } = reasoning;
+  const dateObj = new Date(createdAt);
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-12 pb-32">
+      
+      {/* 1. REPORT HEADER */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 pb-6">
         <div>
+          <div className="text-xs font-black text-slate-400 tracking-widest mb-2 uppercase">Multimodal Intelligence Report</div>
           <div className="flex items-center space-x-3 mb-2">
             <h1 className="text-3xl font-extrabold text-slate-900 flex items-center">
-              <Sparkles className="w-8 h-8 mr-3 text-indigo-600" /> Multimodal Report
+              {id.split('-')[0].toUpperCase()}
             </h1>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm flex items-center">
-              <CheckCircle className="w-3 h-3 mr-1.5" /> Intelligence Generated
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center">
+              <CheckCircle className="w-3 h-3 mr-1.5" /> {status === 'processed' ? 'Completed' : 'Processing'}
             </span>
           </div>
-          <p className="text-slate-500 font-medium text-lg">Vehicle Damage Claim #CLM-1048</p>
+          <p className="text-slate-500 font-medium text-sm">Created {dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString()}</p>
         </div>
         <div className="flex space-x-3">
-          <button className="bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm flex items-center text-slate-700 hover:shadow-md">
-            <Copy className="w-4 h-4 mr-2" /> Copy Summary
+          <button className="bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center text-slate-700 shadow-sm hover:shadow-md">
+            <FileJson className="w-4 h-4 mr-2" /> JSON
           </button>
-          <button className="bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm flex items-center text-slate-700 hover:shadow-md">
+          <button className="bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center text-slate-700 shadow-sm hover:shadow-md">
             <Share2 className="w-4 h-4 mr-2" /> Share
           </button>
           <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all flex items-center shadow-[0_4px_15px_rgba(79,70,229,0.3)] hover:-translate-y-0.5">
@@ -41,206 +138,232 @@ export default function Results() {
         </div>
       </div>
 
-      {/* CROSS-MODAL HERO SECTION */}
-      <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/50 pointer-events-none"></div>
-        
-        <div className="text-center mb-10 relative z-10">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg mb-4">
-            <Zap className="w-6 h-6" />
+      {/* 2. EXECUTIVE SUMMARY & 3. INTELLIGENCE OVERVIEW */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 shadow-lg text-white relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-64 h-64 opacity-20 pointer-events-none">
+             <Canvas><ambientLight intensity={1.5}/><TinyAICore /></Canvas>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Cross-Modal Reasoning</h2>
-          <p className="text-slate-500 font-medium">OmniSense AI correlated information across 3 different modalities to reach its conclusion.</p>
+          <h2 className="text-xs font-black tracking-widest text-indigo-200 mb-4 flex items-center"><Target className="w-4 h-4 mr-2" /> EXECUTIVE SUMMARY</h2>
+          <p className="text-xl font-medium leading-relaxed mb-8 relative z-10">{overallAssessment?.summary || "Analysis completed successfully."}</p>
+          
+          <div className="flex flex-wrap gap-4 relative z-10">
+            {inputs.filter(i => i.type === 'image').length > 0 && <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold flex items-center"><ImageIcon className="w-4 h-4 mr-2" /> {inputs.filter(i => i.type === 'image').length} Images</div>}
+            {inputs.filter(i => i.type === 'document').length > 0 && <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold flex items-center"><FileText className="w-4 h-4 mr-2" /> {inputs.filter(i => i.type === 'document').length} Documents</div>}
+            {inputs.filter(i => i.type === 'audio').length > 0 && <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold flex items-center"><Mic className="w-4 h-4 mr-2" /> {inputs.filter(i => i.type === 'audio').length} Audio</div>}
+          </div>
         </div>
 
-        <div className="max-w-4xl mx-auto relative z-10 flex flex-col items-center">
-          
-          <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6">
-            <motion.div whileHover={{ y: -5 }} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-center relative z-20">
-              <div className="w-12 h-12 mx-auto bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center mb-4 shadow-inner">
-                <ImageIcon className="w-6 h-6"/>
-              </div>
-              <h4 className="text-xs font-black tracking-widest text-slate-400 mb-3">IMAGE FINDING</h4>
-              <p className="text-sm font-bold text-slate-800">Front bumper indentation and blue paint transfer detected.</p>
-            </motion.div>
-            
-            <motion.div whileHover={{ y: -5 }} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-center relative z-20">
-              <div className="w-12 h-12 mx-auto bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center mb-4 shadow-inner">
-                <FileText className="w-6 h-6"/>
-              </div>
-              <h4 className="text-xs font-black tracking-widest text-slate-400 mb-3">DOCUMENT FINDING</h4>
-              <p className="text-sm font-bold text-slate-800">Police report notes "struck blue sedan head-on at low speed".</p>
-            </motion.div>
-            
-            <motion.div whileHover={{ y: -5 }} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-center relative z-20">
-              <div className="w-12 h-12 mx-auto bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center mb-4 shadow-inner">
-                <Mic className="w-6 h-6"/>
-              </div>
-              <h4 className="text-xs font-black tracking-widest text-slate-400 mb-3">VOICE FINDING</h4>
-              <p className="text-sm font-bold text-slate-800">"I bumped into a parked blue car in the lot."</p>
-            </motion.div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm flex flex-col justify-center items-center text-center">
+             <CheckCircle className="w-8 h-8 text-emerald-500 mb-2" />
+             <span className="text-2xl font-black text-slate-800">{correlations.length}</span>
+             <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Consistent<br/>Findings</span>
           </div>
-
-          {/* Animated Connecting Arrows */}
-          <div className="h-20 w-full flex justify-center items-center relative my-4">
-            <svg className="absolute w-full h-full" preserveAspectRatio="none">
-              <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5 }} d="M 16.6% 0 Q 50% 40 50% 100" fill="none" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6,6" />
-              <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, delay: 0.2 }} d="M 50% 0 L 50% 100" fill="none" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6,6" />
-              <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, delay: 0.4 }} d="M 83.3% 0 Q 50% 40 50% 100" fill="none" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6,6" />
-            </svg>
-            <div className="bg-white p-2 rounded-full border border-slate-100 shadow-sm z-10 text-indigo-400">
-              <ArrowDown className="w-5 h-5 animate-bounce" />
-            </div>
+          <div className="bg-white border border-amber-100 rounded-2xl p-5 shadow-sm flex flex-col justify-center items-center text-center">
+             <AlertTriangle className="w-8 h-8 text-amber-500 mb-2" />
+             <span className="text-2xl font-black text-slate-800">{contradictions.length}</span>
+             <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Potential<br/>Contradictions</span>
           </div>
-
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }} 
-            animate={{ scale: 1, opacity: 1 }} 
-            transition={{ delay: 1 }}
-            className="w-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-8 shadow-sm text-center"
-          >
-            <div className="flex items-center justify-center mb-4">
-              <Sparkles className="w-6 h-6 text-indigo-600 mr-2" />
-              <h4 className="text-sm font-black tracking-widest text-indigo-600">AI CORRELATION & CONCLUSION</h4>
-            </div>
-            <p className="text-lg font-bold text-slate-800 leading-relaxed">
-              High consistency across all modalities. The visual evidence of blue paint transfer perfectly correlates with both the customer's voice statement and the official police document regarding the involved vehicle.
-            </p>
-          </motion.div>
-
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-center items-center text-center">
+             <Info className="w-8 h-8 text-slate-400 mb-2" />
+             <span className="text-2xl font-black text-slate-800">{missingInformation.length}</span>
+             <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Missing<br/>Items</span>
+          </div>
+          <div className="bg-white border border-indigo-100 rounded-2xl p-5 shadow-sm flex flex-col justify-center items-center text-center">
+             <ArrowRight className="w-8 h-8 text-indigo-500 mb-2" />
+             <span className="text-2xl font-black text-slate-800">{recommendations.length}</span>
+             <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Recommended<br/>Actions</span>
+          </div>
         </div>
       </div>
 
-      {/* Grid sections */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        
-        {/* Left Col: Confidence & Inputs */}
-        <div className="space-y-8">
-          <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm text-center">
-            <h3 className="text-xs font-black text-slate-400 mb-6 tracking-widest">OVERALL AI CONFIDENCE</h3>
-            <div className="relative w-40 h-40 mx-auto">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <path className="text-slate-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-                <path className="text-indigo-600" strokeDasharray="92, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center flex-col">
-                <span className="text-4xl font-black text-slate-900">92<span className="text-2xl text-slate-500">%</span></span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
-            <h3 className="text-xs font-black text-slate-400 mb-5 tracking-widest">INPUT SOURCES</h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><ImageIcon className="w-4 h-4" /></div>
-                <span className="font-bold text-sm text-slate-700">2 Images analyzed</span>
-              </div>
-              <div className="flex items-center space-x-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><FileText className="w-4 h-4" /></div>
-                <span className="font-bold text-sm text-slate-700">1 Document parsed</span>
-              </div>
-              <div className="flex items-center space-x-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="p-2 bg-amber-100 text-amber-600 rounded-lg"><Mic className="w-4 h-4" /></div>
-                <span className="font-bold text-sm text-slate-700">1 Audio transcribed</span>
-              </div>
-            </div>
-          </div>
+      {/* 4. CROSS-MODAL FINDINGS (HERO) */}
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-extrabold text-slate-900 flex items-center justify-center mb-2">
+            <Brain className="w-6 h-6 mr-3 text-indigo-600" /> Cross-Modal Intelligence
+          </h2>
+          <p className="text-slate-500 font-medium">OmniSense dynamically compared evidence across all available inputs.</p>
         </div>
 
-        {/* Right Col: Details */}
-        <div className="md:col-span-2 space-y-8">
-          <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden">
-            <div className="bg-slate-50/50 px-8 py-5 border-b border-slate-100 flex items-center">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mr-3">
-                <Target className="w-4 h-4" />
-              </div>
-              <h2 className="font-bold text-lg text-slate-900">Executive Summary</h2>
-            </div>
-            <div className="p-8 text-slate-600 text-base leading-relaxed font-medium">
-              Based on the cross-modal analysis, this claim involves a low-speed frontal collision resulting in moderate damage to the front bumper and minor scratching on the driver-side panel. All data sources confirm the date, the damage type, and the involved vehicles. Claim is ready for expedited processing.
-            </div>
-          </div>
+        {correlations.length === 0 && contradictions.length === 0 && (
+          <div className="bg-slate-50 p-10 rounded-3xl text-center text-slate-500 font-medium">No cross-modal relationships detected.</div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden">
-              <div className="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex items-center">
-                <ShieldAlert className="w-5 h-5 text-amber-500 mr-2" />
-                <h2 className="font-bold text-slate-900">Anomalies & Flags</h2>
-              </div>
-              <div className="p-6">
-                <div className="flex items-start space-x-4 bg-amber-50 border border-amber-100 rounded-2xl p-5">
-                  <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 mb-1">Time Discrepancy</h4>
-                    <p className="text-sm text-slate-600 font-medium">Audio mentions "morning", document says 2:00 PM.</p>
+        <div className="space-y-8">
+          {correlations.map((corr, i) => (
+            <div key={i} className="bg-white border border-emerald-100 rounded-3xl p-6 md:p-8 shadow-sm">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                <div className="flex-1 flex flex-col md:flex-row items-center gap-4 w-full">
+                  {corr.sources.map((src, j) => (
+                    <div key={j} className="flex items-center w-full md:w-auto">
+                      <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-center flex-1 md:flex-initial min-w-[140px]">
+                         <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase block mb-1">{src}</span>
+                         <span className="text-sm font-bold text-slate-700 truncate block">{corr.evidence[j] ? corr.evidence[j].substring(0,25) + '...' : 'Evidence mapped'}</span>
+                      </div>
+                      {j < corr.sources.length - 1 && <ArrowRight className="w-5 h-5 text-slate-300 mx-2 hidden md:block" />}
+                      {j < corr.sources.length - 1 && <ArrowDown className="w-5 h-5 text-slate-300 my-2 block md:hidden" />}
+                    </div>
+                  ))}
+                  <ArrowRight className="w-6 h-6 text-emerald-400 mx-4 hidden md:block" />
+                  <ArrowDown className="w-6 h-6 text-emerald-400 my-4 block md:hidden" />
+                  <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl flex-1 text-center md:text-left">
+                    <div className="flex items-center justify-center md:justify-start text-emerald-600 font-bold text-sm mb-1">
+                      <CheckCircle className="w-4 h-4 mr-2" /> CONSISTENT FINDING
+                    </div>
+                    <p className="text-slate-800 font-bold">{corr.topic}</p>
                   </div>
                 </div>
               </div>
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <EvidencePanel details={corr} />
+              </div>
             </div>
+          ))}
+        </div>
+      </div>
 
-            <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden">
-              <div className="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex items-center">
-                <CheckCircle className="w-5 h-5 text-indigo-600 mr-2" />
-                <h2 className="font-bold text-slate-900">Next Actions</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* 8. CONTRADICTIONS */}
+        <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center">
+            <AlertTriangle className="w-5 h-5 text-amber-500 mr-2" /> Potential Contradictions
+          </h2>
+          <div className="space-y-4">
+            {contradictions.length === 0 ? <p className="text-slate-500 text-sm">No contradictions found.</p> : null}
+            {contradictions.map((contra, i) => (
+              <div key={i} className="bg-amber-50 border border-amber-100 rounded-2xl p-5 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400"></div>
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-bold text-slate-800">{contra.topic}</h4>
+                  <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${contra.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-200 text-amber-800'}`}>{contra.severity} RISK</span>
+                </div>
+                <div className="flex items-center space-x-4 mb-3 text-xs font-mono text-slate-600 bg-white p-3 rounded-lg border border-amber-100">
+                  <div className="flex-1"><strong>{contra.sources[0]?.toUpperCase()}</strong><br/>{contra.values[0] || 'Unknown'}</div>
+                  <div className="text-amber-400 font-bold">VS</div>
+                  <div className="flex-1"><strong>{contra.sources[1]?.toUpperCase()}</strong><br/>{contra.values[1] || 'Unknown'}</div>
+                </div>
+                <EvidencePanel details={contra} />
               </div>
-              <div className="p-6 space-y-3">
-                <button className="w-full text-left bg-white hover:bg-slate-50 border border-slate-200 px-5 py-4 rounded-2xl transition-colors text-slate-700 font-bold flex justify-between items-center shadow-sm">
-                  Verify time with customer <ArrowRightIcon />
-                </button>
-                <button className="w-full text-left bg-white hover:bg-slate-50 border border-slate-200 px-5 py-4 rounded-2xl transition-colors text-slate-700 font-bold flex justify-between items-center shadow-sm">
-                  Approve for payout <ArrowRightIcon />
-                </button>
-              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 9. MISSING INFO & 10. RISK SIGNALS */}
+        <div className="space-y-8">
+          <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center">
+              <Info className="w-5 h-5 text-slate-400 mr-2" /> Missing Information
+            </h2>
+            <div className="space-y-4">
+              {missingInformation.length === 0 ? <p className="text-slate-500 text-sm">No missing information.</p> : null}
+              {missingInformation.map((info, i) => (
+                <div key={i} className="flex items-start">
+                  <div className="w-2 h-2 rounded-full bg-slate-300 mt-2 mr-3 shrink-0"></div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">{info.topic}</h4>
+                    <p className="text-xs text-slate-500 mt-1">{info.reason}</p>
+                    <p className="text-xs font-bold text-indigo-600 mt-1">Recommend: {info.recommendedAction}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center">
+              <ShieldAlert className="w-5 h-5 text-orange-500 mr-2" /> Risk Signals
+            </h2>
+            <div className="space-y-4">
+              {riskSignals.length === 0 ? <p className="text-slate-500 text-sm">No major risks identified.</p> : null}
+              {riskSignals.map((risk, i) => (
+                <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-4">
+                  <h4 className="text-sm font-bold text-slate-800 mb-1">{risk.reason}</h4>
+                  <p className="text-xs text-slate-600">{risk.evidence}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Floating AI Chat Assistant */}
-      <motion.div 
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="fixed bottom-8 right-8 w-96 bg-white/95 backdrop-blur-2xl rounded-3xl overflow-hidden flex flex-col z-50 shadow-[0_20px_50px_rgba(79,70,229,0.15)] border border-slate-100"
-      >
-        <div className="bg-white/80 px-6 py-5 border-b border-slate-100 flex justify-between items-center relative overflow-hidden">
+      {/* 11. RECOMMENDATIONS */}
+      <div className="bg-white border border-slate-100 rounded-3xl p-8 md:p-10 shadow-sm">
+        <h2 className="text-xl font-bold text-slate-900 mb-2 flex items-center">
+          <Target className="w-6 h-6 text-indigo-600 mr-3" /> Recommended Next Actions
+        </h2>
+        <p className="text-slate-500 font-medium mb-8">Actionable steps derived entirely from the evidence across all modalities.</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendations.length === 0 ? <p className="text-slate-500 text-sm">No specific actions recommended.</p> : null}
+          {recommendations.map((rec, i) => (
+            <div key={i} className="bg-white border border-slate-200 hover:border-indigo-300 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all">
+              <div className="text-3xl font-black text-slate-100 mb-2">0{i+1}</div>
+              <h4 className="font-bold text-slate-800 text-base mb-2">{rec.action}</h4>
+              <p className="text-sm text-slate-500">{rec.reason}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CUSTOMER SUMMARY BUTTON */}
+      <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between shadow-sm">
+        <div className="mb-4 md:mb-0">
+          <h2 className="text-lg font-bold text-indigo-900 mb-1">Customer-Facing Summary</h2>
+          <p className="text-sm text-indigo-700">Generate a non-technical, simple explanation of these findings suitable for the end-user.</p>
+        </div>
+        {!customerSummary ? (
+          <button onClick={handleGenerateSummary} disabled={summaryLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full font-bold shadow-md transition-all flex items-center disabled:opacity-50">
+            {summaryLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />} 
+            Generate Summary
+          </button>
+        ) : null}
+        
+        {customerSummary && (
+          <div className="w-full mt-6 bg-white p-6 rounded-2xl border border-indigo-100 shadow-sm">
+            <h4 className="text-sm font-black tracking-widest text-indigo-400 mb-3">GENERATED SUMMARY</h4>
+            <p className="text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">{customerSummary}</p>
+          </div>
+        )}
+      </div>
+
+      {/* 13. ASK OMNISENSE */}
+      <motion.div className="fixed bottom-8 right-8 w-[400px] bg-white/95 backdrop-blur-2xl rounded-3xl overflow-hidden flex flex-col z-50 shadow-[0_20px_50px_rgba(79,70,229,0.15)] border border-slate-100">
+        <div onClick={() => setChatOpen(!chatOpen)} className="bg-white/80 px-6 py-5 border-b border-slate-100 flex justify-between items-center relative overflow-hidden cursor-pointer">
           <div className="absolute right-0 top-0 w-24 h-24 pointer-events-none">
             <Canvas><ambientLight intensity={1.5}/><directionalLight position={[2, 2, 2]} intensity={2}/><TinyAICore /></Canvas>
           </div>
-          <div className="relative z-10">
-            <div className="font-bold text-slate-900 text-sm flex items-center mb-0.5">
-              <Sparkles className="w-4 h-4 mr-2 text-indigo-600" /> Ask OmniSense
+          <div className="relative z-10 flex items-center justify-between w-full">
+            <div>
+              <div className="font-bold text-slate-900 text-sm flex items-center mb-0.5"><Sparkles className="w-4 h-4 mr-2 text-indigo-600" /> Ask OmniSense</div>
+              <div className="text-xs font-medium text-slate-400">Context-aware reasoning assistant</div>
             </div>
-            <div className="text-xs font-medium text-slate-400">Ask questions about this analysis.</div>
+            {chatOpen ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronUp className="w-5 h-5 text-slate-400" />}
           </div>
         </div>
         
-        <div className="h-72 p-6 overflow-y-auto bg-slate-50/50 text-sm flex flex-col space-y-4">
-          <div className="bg-white border border-slate-100 p-4 rounded-2xl rounded-tl-none self-start text-slate-700 font-medium shadow-sm max-w-[85%]">
-            I've analyzed this claim. Try asking:
-            <ul className="mt-3 space-y-2 text-xs">
-              <li className="text-indigo-600 cursor-pointer hover:underline">What damage was detected?</li>
-              <li className="text-indigo-600 cursor-pointer hover:underline">Why was this flagged?</li>
-              <li className="text-indigo-600 cursor-pointer hover:underline">Compare the voice with the document.</li>
-            </ul>
-          </div>
-        </div>
-        <div className="p-4 bg-white border-t border-slate-100 relative">
-          <input 
-            type="text" 
-            placeholder="Ask OmniSense..." 
-            className="w-full bg-slate-50 border border-slate-200 rounded-full pl-5 pr-12 py-3.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all shadow-inner"
-          />
-          <button className="absolute right-6 top-1/2 -translate-y-1/2 text-indigo-600 hover:text-indigo-800 p-2 bg-white rounded-full shadow-sm border border-slate-100 transition-colors">
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
+        <AnimatePresence>
+          {chatOpen && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}>
+              <div className="h-80 p-6 overflow-y-auto bg-slate-50/50 text-sm flex flex-col space-y-4">
+                {messages.map((msg, i) => (
+                  <div key={i} className={`p-4 rounded-2xl max-w-[85%] font-medium shadow-sm ${msg.role === 'ai' ? 'bg-white border border-slate-100 rounded-tl-none self-start text-slate-700' : 'bg-indigo-600 text-white rounded-tr-none self-end'}`}>
+                    {msg.content}
+                  </div>
+                ))}
+                {chatLoading && <div className="bg-white border border-slate-100 p-4 rounded-2xl rounded-tl-none self-start text-slate-500 font-medium shadow-sm flex items-center"><Loader2 className="w-4 h-4 animate-spin mr-2" /> Thinking...</div>}
+                <div ref={chatEndRef} />
+              </div>
+              <form onSubmit={handleSendChat} className="p-4 bg-white border-t border-slate-100 relative flex items-center">
+                <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask about this analysis..." className="w-full bg-slate-50 border border-slate-200 rounded-full pl-5 pr-12 py-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all shadow-inner" />
+                <button type="submit" disabled={!chatInput.trim() || chatLoading} className="absolute right-6 p-2 text-indigo-600 hover:text-indigo-800 bg-white rounded-full shadow-sm border border-slate-100 disabled:opacity-50"><Send className="w-4 h-4" /></button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
 }
 
-function ArrowRightIcon() {
-  return <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>;
-}
