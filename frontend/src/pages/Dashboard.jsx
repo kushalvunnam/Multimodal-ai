@@ -2,6 +2,7 @@
 import { Activity, FileText, Image as ImageIcon, Mic, AlertTriangle, ArrowRight, CheckCircle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
+import { useAuth } from '../context/AuthContext';
 import { Float, Sphere, MeshDistortMaterial } from '@react-three/drei';
 
 function TinyAICore() {
@@ -15,6 +16,7 @@ function TinyAICore() {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const stats = [
     { label: 'Total Analyses', value: '1,248', icon: Activity, color: 'text-primary', bg: 'bg-primary/10', trend: '+12%' },
     { label: 'Images Processed', value: '4,892', icon: ImageIcon, color: 'text-blue-500', bg: 'bg-blue-100', trend: '+8%' },
@@ -32,7 +34,7 @@ export default function Dashboard() {
     <div className="space-y-8 relative">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-extrabold text-text-main mb-1">Good morning, Kushal</h1>
+          <h1 className="text-3xl font-extrabold text-text-main mb-1">Good morning, {user?.name?.split(' ')[0] || 'there'}</h1>
           <p className="text-text-muted text-base font-medium">Here's your AI analysis overview.</p>
         </div>
         <Link to="/analysis/new" className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-full font-bold transition-all shadow-[0_4px_15px_rgba(79,70,229,0.3)] hover:shadow-[0_8px_25px_rgba(79,70,229,0.4)] flex items-center hover:-translate-y-0.5">
@@ -148,3 +150,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

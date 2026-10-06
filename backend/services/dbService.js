@@ -5,10 +5,12 @@ class InMemoryDB {
     this.analyses = new Map();
   }
 
-  createAnalysis(data = {}) {
+  createAnalysis(data = {}, userId) {
+    if (!userId) throw new Error('userId is required');
     const id = uuidv4();
     const analysis = {
       _id: id,
+      userId,
       title: data.title || 'New Analysis',
       inputs: [],
       textContext: '',
@@ -34,20 +36,27 @@ class InMemoryDB {
     return analysis;
   }
 
-  getAnalysis(id) {
-    return this.analyses.get(id) || null;
+  getAnalysis(id, userId) {
+    const analysis = this.analyses.get(id);
+    if (!analysis) return null;
+    if (userId && analysis.userId !== userId) return null;
+    return analysis;
   }
 
-  updateAnalysis(id, updates) {
-    const analysis = this.getAnalysis(id);
+  getAnalysesByUser(userId) {
+    return Array.from(this.analyses.values()).filter(a => a.userId === userId);
+  }
+
+  updateAnalysis(id, updates, userId) {
+    const analysis = this.getAnalysis(id, userId);
     if (!analysis) return null;
     const updated = { ...analysis, ...updates, updatedAt: new Date() };
     this.analyses.set(id, updated);
     return updated;
   }
 
-  addInput(analysisId, input) {
-    const analysis = this.getAnalysis(analysisId);
+  addInput(analysisId, input, userId) {
+    const analysis = this.getAnalysis(analysisId, userId);
     if (!analysis) return null;
     const inputId = uuidv4();
     const newInput = { id: inputId, ...input, uploadedAt: new Date() };
@@ -56,8 +65,8 @@ class InMemoryDB {
     return newInput;
   }
 
-  removeInput(analysisId, inputId) {
-    const analysis = this.getAnalysis(analysisId);
+  removeInput(analysisId, inputId, userId) {
+    const analysis = this.getAnalysis(analysisId, userId);
     if (!analysis) return false;
     const initialLength = analysis.inputs.length;
     analysis.inputs = analysis.inputs.filter(input => input.id !== inputId);

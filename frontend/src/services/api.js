@@ -1,7 +1,5 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
-// Production must never depend on a Vercel environment variable that can
-// accidentally point to localhost. Local development keeps using port 5000.
 const PRODUCTION_API_URL = 'https://multimodal-ai-b0xm.onrender.com';
 const API_BASE_URL = import.meta.env.PROD
   ? PRODUCTION_API_URL
@@ -10,8 +8,19 @@ const API_BASE_URL = import.meta.env.PROD
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 60000,
+  withCredentials: true // Extremely important for cookies
 });
 
+// Auth Routes
+export const signup = async (data) => (await apiClient.post('/api/auth/signup', data)).data;
+export const signin = async (data) => (await apiClient.post('/api/auth/signin', data)).data;
+export const signout = async () => (await apiClient.post('/api/auth/signout')).data;
+export const getCurrentUser = async () => (await apiClient.get('/api/auth/me')).data;
+export const forgotPassword = async (email) => (await apiClient.post('/api/auth/forgot-password', { email })).data;
+export const resetPassword = async (token, password) => (await apiClient.post('/api/auth/reset-password', { token, password })).data;
+
+// Analysis Routes
+export const getUserAnalyses = async () => (await apiClient.get('/api/analysis')).data;
 export const createAnalysis = async () => (await apiClient.post('/api/analysis/create')).data;
 export const getAnalysis = async (analysisId) => (await apiClient.get(`/api/analysis/${analysisId}`)).data;
 export const uploadFile = async (analysisId, file, onUploadProgress) => {
@@ -29,5 +38,4 @@ export const processAnalysis = async (analysisId) => (await apiClient.post(`/api
 export const getAnalysisStatus = async (analysisId) => (await apiClient.get(`/api/analysis/${analysisId}/status`)).data;
 export const sendChatMessage = async (analysisId, message) => (await apiClient.post(`/api/analysis/${analysisId}/chat`, { message })).data;
 export const generateCustomerSummary = async (analysisId) => (await apiClient.post(`/api/analysis/${analysisId}/summary`)).data;
-
 export const checkHealth = async () => (await apiClient.get('/api/health')).data;

@@ -1,4 +1,8 @@
-﻿const db = require('../services/dbService');
+﻿exports.getUserAnalyses = (req, res) => {
+  try { res.json({ success: true, data: db.getAnalysesByUser(req.user.id) }); }
+  catch (error) { res.status(500).json({ success: false, error: { message: error.message } }); }
+};
+const db = require('../services/dbService');
 const uploadService = require('../services/uploadService');
 const aiService = require('../services/ai');
 
@@ -361,5 +365,6 @@ exports.generateCustomerSummary = async (req, res) => {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } });
   }
 };
+
 
 

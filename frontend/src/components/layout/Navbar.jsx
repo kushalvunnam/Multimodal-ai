@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bell, User, Search, Sparkles, Settings, LogOut, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { checkHealth } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,6 +17,7 @@ export default function Navbar() {
   const aiRef = useRef(null);
   const notifRef = useRef(null);
   const profileRef = useRef(null);
+  const { user, logout } = useAuth();
 
   // Close dropdowns on click outside or escape
   useEffect(() => {
@@ -187,8 +189,8 @@ export default function Navbar() {
                 className="absolute right-0 top-full mt-3 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-50 py-2"
               >
                 <div className="px-4 py-2 border-b border-gray-50 mb-1">
-                  <p className="text-sm font-bold text-gray-800 truncate">Demo User</p>
-                  <p className="text-xs text-gray-400 truncate">demo@omnisense.ai</p>
+                  <p className="text-sm font-bold text-gray-800 truncate">{user?.name || 'User'}</p>
+                  <p className="text-xs text-gray-400 truncate">{user?.email || ''}</p>
                 </div>
                 
                 <Link to="/settings" onClick={() => setActiveDropdown(null)} className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors">
@@ -197,7 +199,7 @@ export default function Navbar() {
                 <Link to="/settings" onClick={() => setActiveDropdown(null)} className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors">
                   <Settings className="w-4 h-4 mr-2" /> Settings
                 </Link>
-                <button onClick={() => setActiveDropdown(null)} className="w-full flex items-center px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors mt-1 border-t border-gray-50 pt-2">
+                <button onClick={() => { setActiveDropdown(null); logout(); }} className="w-full flex items-center px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors mt-1 border-t border-gray-50 pt-2">
                   <LogOut className="w-4 h-4 mr-2" /> Sign out
                 </button>
               </motion.div>
@@ -209,3 +211,4 @@ export default function Navbar() {
     </header>
   );
 }
+

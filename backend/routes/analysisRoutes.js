@@ -7,6 +7,7 @@ const { upload, handleUploadError } = require('../middleware/uploadMiddleware');
 // Apply auth to all routes
 router.use(requireAuth);
 
+router.get('/', analysisController.getUserAnalyses);
 router.post('/create', analysisController.createAnalysis);
 router.get('/:id', analysisController.getAnalysis);
 router.get('/:id/status', analysisController.getAnalysisStatus);
@@ -19,3 +20,4 @@ router.post('/:id/chat', analysisController.chat);
 router.post('/:id/summary', analysisController.generateCustomerSummary);
 
 module.exports = router;
+
