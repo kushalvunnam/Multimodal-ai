@@ -1,8 +1,28 @@
 ﻿import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, PlusCircle, History, FileText, Settings, Layers, Box } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { getDashboardStats } from '../../services/api';
 
 export default function Sidebar() {
+  const [usage, setUsage] = useState({ used: 0, limit: 100 });
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchUsage = async () => {
+      try {
+        const res = await getDashboardStats();
+        if (mounted && res?.success && res.data?.usage) {
+          setUsage(res.data.usage);
+        }
+      } catch (e) {}
+    };
+    fetchUsage();
+    return () => { mounted = false; };
+  }, []);
+
+  const capacityPercent = Math.min(100, Math.round((usage.used / usage.limit) * 100)) || 0;
+
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'New Analysis', path: '/analysis/new', icon: PlusCircle },
