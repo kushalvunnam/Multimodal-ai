@@ -1,4 +1,4 @@
-const Groq = require('groq-sdk');
+﻿const Groq = require('groq-sdk');
 
 const getClient = () => {
   const apiKey = process.env.GROQ_API_KEY;
@@ -32,10 +32,16 @@ const analyzeImage = async (buffer, mimeType) => {
 
 Return ONLY a JSON object matching this exact structure:
 {
-  "vehicle": { "type": "string|null", "make": "string|null", "model": "string|null" },
   "damage": [
-    { "area": "string", "severity": "low|medium|high", "description": "string", "confidence": 0.0 }
+    {
+      "area": "Rear bumper",
+      "severity": "High",
+      "description": "Visible deformation, scraping and paint damage on the rear bumper.",
+      "confidence": 0.95
+    }
   ],
+  "summary": "Vehicle has visible exterior damage.",
+  "vehicle": { "type": "string|null", "make": "string|null", "model": "string|null" },
   "imageQuality": "string",
   "confidence": 0.0
 }
@@ -125,3 +131,5 @@ module.exports = {
   crossModalReasoning,
   chatWithAnalysis
 };
+
+
