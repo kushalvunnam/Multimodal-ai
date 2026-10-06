@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, User, Search, Sparkles, Settings, LogOut, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Bell, User, Search, Sparkles, Settings, LogOut, CheckCircle, XCircle, Loader2, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { checkHealth } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -219,4 +219,5 @@ export default function Navbar({ onMenuClick }) {
     </header>
   );
 }
+
 
