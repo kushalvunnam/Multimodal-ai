@@ -50,6 +50,7 @@ export default function Results() {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorStatus, setErrorStatus] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   
   // Chat state
@@ -101,11 +102,18 @@ export default function Results() {
     finally { setSummaryLoading(false); }
   };
 
+  
   if (loading) return <div className="min-h-[60vh] flex flex-col items-center justify-center text-indigo-600"><Loader2 className="w-10 h-10 animate-spin mb-4" /> Loading AI Results...</div>;
-  if (!data || !data.reasoning) return <div className="p-10 text-center text-red-500 font-bold">Analysis not found or still processing.</div>;
+  if (errorStatus === 401) return <div className="p-10 text-center text-red-500 font-bold bg-red-50 rounded-2xl">Your session has expired. Please sign in again.</div>;
+  if (errorStatus === 403) return <div className="p-10 text-center text-red-500 font-bold bg-red-50 rounded-2xl">You do not have permission to view this analysis.</div>;
+  if (errorStatus === 404 || !data) return <div className="p-10 text-center text-red-500 font-bold bg-red-50 rounded-2xl">This analysis could not be found.</div>;
+  
+  if (data.status === 'processing') return <div className="p-10 text-center text-blue-500 font-bold bg-blue-50 rounded-2xl">Analysis is still being processed. Please check the workspace.</div>;
+  if (data.status === 'failed') return <div className="p-10 text-center text-red-500 font-bold bg-red-50 rounded-2xl">Analysis processing failed. <a href={`/analysis/${id}/workspace`} className="underline">Retry</a></div>;
+  
+  const { reasoning = {}, inputs = [], customerSummary, status, createdAt, imageAnalysis, documentAnalysis, audioAnalysis, textAnalysis } = data;
+  const { correlations = [], contradictions = [], missingInformation = [], riskSignals = [], recommendations = [], overallAssessment = 'Analysis completed, but detailed reasoning was not generated.' } = reasoning;
 
-  const { reasoning, inputs, customerSummary, status, createdAt, imageAnalysis, documentAnalysis, audioAnalysis, textAnalysis } = data;
-  const { correlations = [], contradictions = [], missingInformation = [], riskSignals = [], recommendations = [], overallAssessment } = reasoning;
   const dateObj = new Date(createdAt);
 
   return (

@@ -1,78 +1,74 @@
-﻿const { v4: uuidv4 } = require('uuid');
+﻿const Analysis = require('../models/Analysis');
 
-class InMemoryDB {
-  constructor() {
-    this.analyses = new Map();
-  }
-
-  createAnalysis(data = {}, userId) {
+class DBService {
+  async createAnalysis(data = {}, userId) {
     if (!userId) throw new Error('userId is required');
-    const id = uuidv4();
-    const analysis = {
-      _id: id,
+    const analysis = new Analysis({
       userId,
       title: data.title || 'New Analysis',
       inputs: [],
       textContext: '',
       status: 'draft',
-      
       aiProvider: process.env.AI_PROVIDER || 'gemini',
       processingStatus: { overall: 'pending', progress: 0, steps: [] },
-      
       imageAnalysis: null,
       documentAnalysis: null,
       audioAnalysis: null,
       textAnalysis: null,
-      
-      // Phase 5 additions
       reasoning: null,
       chatHistory: [],
-      
-      processedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.analyses.set(id, analysis);
+      processedAt: null
+    });
+    await analysis.save();
+    return analysis.toObject();
+  }
+
+  async getAnalysis(id, userId) {
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) return null; // validate ObjectId
+    const query = { _id: id };
+    if (userId) query.userId = userId;
+    const analysis = await Analysis.findOne(query).lean();
     return analysis;
   }
 
-  getAnalysis(id, userId) {
-    const analysis = this.analyses.get(id);
-    if (!analysis) return null;
-    if (userId && analysis.userId !== userId) return null;
-    return analysis;
+  async getAnalysesByUser(userId) {
+    return await Analysis.find({ userId }).sort({ createdAt: -1 }).lean();
   }
 
-  getAnalysesByUser(userId) {
-    return Array.from(this.analyses.values()).filter(a => a.userId === userId);
-  }
-
-  updateAnalysis(id, updates, userId) {
-    const analysis = this.getAnalysis(id, userId);
-    if (!analysis) return null;
-    const updated = { ...analysis, ...updates, updatedAt: new Date() };
-    this.analyses.set(id, updated);
+  async updateAnalysis(id, updates, userId) {
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) return null;
+    const updated = await Analysis.findOneAndUpdate(
+      { _id: id, userId },
+      { $set: updates },
+      { new: true }
+    ).lean();
     return updated;
   }
 
-  addInput(analysisId, input, userId) {
-    const analysis = this.getAnalysis(analysisId, userId);
-    if (!analysis) return null;
+  async addInput(analysisId, input, userId) {
+    if (!analysisId.match(/^[0-9a-fA-F]{24}$/)) return null;
+    const { v4: uuidv4 } = require('uuid');
     const inputId = uuidv4();
     const newInput = { id: inputId, ...input, uploadedAt: new Date() };
-    analysis.inputs.push(newInput);
-    analysis.updatedAt = new Date();
+    
+    const analysis = await Analysis.findOneAndUpdate(
+      { _id: analysisId, userId },
+      { $push: { inputs: newInput } },
+      { new: true }
+    ).lean();
+    
+    if (!analysis) return null;
     return newInput;
   }
 
-  removeInput(analysisId, inputId, userId) {
-    const analysis = this.getAnalysis(analysisId, userId);
-    if (!analysis) return false;
-    const initialLength = analysis.inputs.length;
-    analysis.inputs = analysis.inputs.filter(input => input.id !== inputId);
-    analysis.updatedAt = new Date();
-    return analysis.inputs.length !== initialLength;
+  async removeInput(analysisId, inputId, userId) {
+    if (!analysisId.match(/^[0-9a-fA-F]{24}$/)) return false;
+    const result = await Analysis.updateOne(
+      { _id: analysisId, userId },
+      { $pull: { inputs: { id: inputId } } }
+    );
+    return result.modifiedCount > 0;
   }
 }
 
-module.exports = new InMemoryDB();
+module.exports = new DBService();

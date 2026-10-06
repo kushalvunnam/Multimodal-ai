@@ -1,6 +1,6 @@
-﻿exports.getDashboardStats = (req, res) => {
+﻿exports.getDashboardStats = async (req, res) => {
   try {
-    const analyses = db.getAnalysesByUser(req.user.id);
+    const analyses = await db.getAnalysesByUser(req.user.id);
     const totalAnalyses = analyses.length;
     const documents = analyses.filter(a => a.inputs && a.inputs.some(i => i.type === 'document')).length;
     
@@ -66,8 +66,8 @@
   }
 };
 
-exports.getUserAnalyses = (req, res) => {
-  try { res.json({ success: true, data: db.getAnalysesByUser(req.user.id) }); }
+exports.getUserAnalyses = async (req, res) => {
+  try { res.json({ success: true, data: await db.getAnalysesByUser(req.user.id) }); }
   catch (error) { res.status(500).json({ success: false, error: { message: error.message } }); }
 };
 const db = require('../services/dbService');
@@ -83,8 +83,8 @@ const getFileType = (mimeType) => {
   return 'unknown';
 };
 
-exports.createAnalysis = (req, res) => {
-  try { res.json({ success: true, data: db.createAnalysis(req.body, req.user.id) }); }
+exports.createAnalysis = async (req, res) => {
+  try { res.json({ success: true, data: await db.createAnalysis(req.body, req.user.id) }); }
   catch (error) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }); }
 };
 
@@ -92,7 +92,7 @@ exports.uploadFile = async (req, res) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ success: false, error: { code: 'NO_FILE', message: 'No file provided.' } });
-    const analysis = db.getAnalysis(req.params.id, req.user.id);
+    const analysis = await db.getAnalysis(req.params.id, req.user.id);
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
 
     const type = getFileType(file.mimetype);
@@ -100,7 +100,7 @@ exports.uploadFile = async (req, res) => {
     if (file.size > limit) return res.status(400).json({ success: false, error: { code: 'FILE_TOO_LARGE', message: `${type} exceeds limit.` } });
 
     const storageData = await uploadService.uploadFile(file);
-    const input = db.addInput(req.params.id, { ...storageData, type, status: 'uploaded' }, req.user.id);
+    const input = await db.addInput(req.params.id, { ...storageData, type, status: 'uploaded' }, req.user.id);
     res.json({ success: true, data: input });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } });
@@ -109,12 +109,12 @@ exports.uploadFile = async (req, res) => {
 
 exports.removeInput = async (req, res) => {
   try {
-    const analysis = db.getAnalysis(req.params.id, req.user.id);
+    const analysis = await db.getAnalysis(req.params.id, req.user.id);
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
     const input = analysis.inputs.find(i => i.id === req.params.inputId);
     if (input) {
       await uploadService.deleteFile(input.storageReference);
-      db.removeInput(req.params.id, req.params.inputId, req.user.id);
+      await db.removeInput(req.params.id, req.params.inputId, req.user.id);
     }
     res.json({ success: true });
   } catch (error) {
@@ -122,9 +122,9 @@ exports.removeInput = async (req, res) => {
   }
 };
 
-exports.updateContext = (req, res) => {
+exports.updateContext = async (req, res) => {
   try {
-    const analysis = db.updateAnalysis(req.params.id, { textContext: req.body.text }, req.user.id);
+    const analysis = await db.updateAnalysis(req.params.id, { textContext: req.body.text }, req.user.id);
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
     res.json({ success: true, data: analysis });
   } catch (error) {
@@ -132,9 +132,9 @@ exports.updateContext = (req, res) => {
   }
 };
 
-exports.getAnalysis = (req, res) => {
+exports.getAnalysis = async (req, res) => {
   try {
-    const analysis = db.getAnalysis(req.params.id, req.user.id);
+    const analysis = await db.getAnalysis(req.params.id, req.user.id);
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
     res.json({ success: true, data: analysis });
   } catch (error) {
@@ -142,18 +142,18 @@ exports.getAnalysis = (req, res) => {
   }
 };
 
-exports.updateStatus = (req, res) => {
+exports.updateStatus = async (req, res) => {
   try {
-    const analysis = db.updateAnalysis(req.params.id, { status: req.body.status }, req.user.id);
+    const analysis = await db.updateAnalysis(req.params.id, { status: req.body.status }, req.user.id);
     res.json({ success: true, data: analysis });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } });
   }
 };
 
-exports.getAnalysisStatus = (req, res) => {
+exports.getAnalysisStatus = async (req, res) => {
   try {
-    const analysis = db.getAnalysis(req.params.id, req.user.id);
+    const analysis = await db.getAnalysis(req.params.id, req.user.id);
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
     res.json({ success: true, data: { status: analysis.status, progress: analysis.processingStatus?.progress || 0, steps: analysis.processingStatus?.steps || [] } });
   } catch (error) {
@@ -222,7 +222,7 @@ exports.processAnalysis = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const analysis = db.getAnalysis(id, userId);
+    const analysis = await db.getAnalysis(id, userId);
 
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
     if (analysis.status === 'processing' || analysis.status === 'processed') return res.json({ success: true, data: analysis });
@@ -236,23 +236,23 @@ exports.processAnalysis = async (req, res) => {
     if (analysis.textContext || isDemo) steps.push({ name: 'Text Understanding', status: 'pending' });
     if (steps.length > 0) steps.push({ name: 'Cross-Modal Reasoning', status: 'pending' });
 
-    db.updateAnalysis(id, { status: 'processing', processingStatus: { overall: 'processing', progress: 5, steps } }, userId);
+    await db.updateAnalysis(id, { status: 'processing', processingStatus: { overall: 'processing', progress: 5, steps } }, userId);
     res.json({ success: true, message: 'Processing started' });
 
     (async () => {
       let currentProgress = 5;
       const stepIncrement = steps.length > 0 ? 90 / steps.length : 90;
-      const updateStep = (name, status) => {
-        const a = db.getAnalysis(id, userId);
+      const updateStep = async (name, status) => {
+        const a = await db.getAnalysis(id, userId);
         const s = a.processingStatus.steps.map(step => step.name === name ? { ...step, status } : step);
-        db.updateAnalysis(id, { processingStatus: { ...a.processingStatus, steps: s } }, userId);
+        await db.updateAnalysis(id, { processingStatus: { ...a.processingStatus, steps: s } }, userId);
       };
 
       try {
         const results = {};
 
         if (isDemo || analysis.inputs.some(i => i.type === 'image')) {
-          updateStep('Image Understanding', 'processing');
+          await updateStep('Image Understanding', 'processing');
           if (isDemo) {
             results.imageAnalysis = demoImageFindings;
             await new Promise(r => setTimeout(r, 1000));
@@ -309,14 +309,14 @@ exports.processAnalysis = async (req, res) => {
               confidence: Math.max(...imageFindings.map(img => img.confidence || 0), 0)
             };
           }
-          db.updateAnalysis(id, { imageAnalysis: results.imageAnalysis }, userId);
+          await db.updateAnalysis(id, { imageAnalysis: results.imageAnalysis }, userId);
           currentProgress += stepIncrement;
-          updateStep('Image Understanding', 'completed');
-          db.updateAnalysis(id, { processingStatus: { ...db.getAnalysis(id, userId).processingStatus, progress: currentProgress } }, userId);
+          await updateStep('Image Understanding', 'completed');
+          await db.updateAnalysis(id, { processingStatus: { ...(await db.getAnalysis(id, userId)).processingStatus, progress: currentProgress } }, userId);
         }
 
         if (isDemo || analysis.inputs.some(i => i.type === 'document')) {
-          updateStep('Document Intelligence', 'processing');
+          await updateStep('Document Intelligence', 'processing');
           if (isDemo) {
             results.documentAnalysis = demoDocumentFindings;
             await new Promise(r => setTimeout(r, 1000));
@@ -325,14 +325,14 @@ exports.processAnalysis = async (req, res) => {
             const fileData = await uploadService.getFile(docs[0].storageReference);
             results.documentAnalysis = await aiService.processInput('document', fileData.buffer, fileData.mimeType);
           }
-          db.updateAnalysis(id, { documentAnalysis: results.documentAnalysis }, userId);
+          await db.updateAnalysis(id, { documentAnalysis: results.documentAnalysis }, userId);
           currentProgress += stepIncrement;
-          updateStep('Document Intelligence', 'completed');
-          db.updateAnalysis(id, { processingStatus: { ...db.getAnalysis(id, userId).processingStatus, progress: currentProgress } }, userId);
+          await updateStep('Document Intelligence', 'completed');
+          await db.updateAnalysis(id, { processingStatus: { ...(await db.getAnalysis(id, userId)).processingStatus, progress: currentProgress } }, userId);
         }
 
         if (isDemo || analysis.inputs.some(i => i.type === 'audio')) {
-          updateStep('Voice Intelligence', 'processing');
+          await updateStep('Voice Intelligence', 'processing');
           if (isDemo) {
             results.audioAnalysis = demoAudioFindings;
             await new Promise(r => setTimeout(r, 1000));
@@ -341,28 +341,28 @@ exports.processAnalysis = async (req, res) => {
             const fileData = await uploadService.getFile(audio[0].storageReference);
             results.audioAnalysis = await aiService.processInput('audio', fileData.buffer, fileData.mimeType);
           }
-          db.updateAnalysis(id, { audioAnalysis: results.audioAnalysis }, userId);
+          await db.updateAnalysis(id, { audioAnalysis: results.audioAnalysis }, userId);
           currentProgress += stepIncrement;
-          updateStep('Voice Intelligence', 'completed');
-          db.updateAnalysis(id, { processingStatus: { ...db.getAnalysis(id, userId).processingStatus, progress: currentProgress } }, userId);
+          await updateStep('Voice Intelligence', 'completed');
+          await db.updateAnalysis(id, { processingStatus: { ...(await db.getAnalysis(id, userId)).processingStatus, progress: currentProgress } }, userId);
         }
 
         if (isDemo || analysis.textContext) {
-          updateStep('Text Understanding', 'processing');
+          await updateStep('Text Understanding', 'processing');
           if (isDemo) {
             results.textAnalysis = demoTextFindings;
             await new Promise(r => setTimeout(r, 1000));
           } else {
             results.textAnalysis = await aiService.processInput('text', null, null, analysis.textContext);
           }
-          db.updateAnalysis(id, { textAnalysis: results.textAnalysis }, userId);
+          await db.updateAnalysis(id, { textAnalysis: results.textAnalysis }, userId);
           currentProgress += stepIncrement;
-          updateStep('Text Understanding', 'completed');
-          db.updateAnalysis(id, { processingStatus: { ...db.getAnalysis(id, userId).processingStatus, progress: currentProgress } }, userId);
+          await updateStep('Text Understanding', 'completed');
+          await db.updateAnalysis(id, { processingStatus: { ...(await db.getAnalysis(id, userId)).processingStatus, progress: currentProgress } }, userId);
         }
 
         if (Object.keys(results).length > 0) {
-          updateStep('Cross-Modal Reasoning', 'processing');
+          await updateStep('Cross-Modal Reasoning', 'processing');
           const reasoningResult = await aiService.runReasoning(results);
           const fallbackReasoning = buildImageFallbackReasoning(results.imageAnalysis);
           const hasUsefulReasoning = reasoningResult && !reasoningResult.error && (
@@ -380,21 +380,21 @@ exports.processAnalysis = async (req, res) => {
             ? reasoningResult
             : (fallbackReasoning || reasoningResult);
 
-          db.updateAnalysis(id, { reasoning: finalReasoning }, userId);
+          await db.updateAnalysis(id, { reasoning: finalReasoning }, userId);
           currentProgress += stepIncrement;
-          updateStep('Cross-Modal Reasoning', 'completed');
+          await updateStep('Cross-Modal Reasoning', 'completed');
         }
 
-        db.updateAnalysis(id, {
+        await db.updateAnalysis(id, {
           status: 'processed', processedAt: new Date(),
-          processingStatus: { ...db.getAnalysis(id, userId).processingStatus, overall: 'processed', progress: 100 }
+          processingStatus: { ...(await db.getAnalysis(id, userId)).processingStatus, overall: 'processed', progress: 100 }
         }, userId);
 
       } catch (err) {
         console.error('Async processing failed', err);
-        db.updateAnalysis(id, {
+        await db.updateAnalysis(id, {
           status: 'failed',
-          processingStatus: { overall: 'failed', progress: currentProgress, error: err.message, steps: db.getAnalysis(id, userId).processingStatus.steps }
+          processingStatus: { overall: 'failed', progress: currentProgress, error: err.message, steps: (await db.getAnalysis(id, userId)).processingStatus.steps }
         }, userId);
       }
     })();
@@ -405,13 +405,13 @@ exports.processAnalysis = async (req, res) => {
 
 exports.chat = async (req, res) => {
   try {
-    const analysis = db.getAnalysis(req.params.id, req.user.id);
+    const analysis = await db.getAnalysis(req.params.id, req.user.id);
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
 
     const reply = await aiService.runChat(analysis, req.body.message);
     const history = analysis.chatHistory || [];
     history.push({ role: 'user', content: req.body.message }, { role: 'ai', content: reply });
-    db.updateAnalysis(req.params.id, { chatHistory: history }, req.user.id);
+    await db.updateAnalysis(req.params.id, { chatHistory: history }, req.user.id);
 
     res.json({ success: true, data: { message: reply } });
   } catch (error) {
@@ -421,12 +421,12 @@ exports.chat = async (req, res) => {
 
 exports.generateCustomerSummary = async (req, res) => {
   try {
-    const analysis = db.getAnalysis(req.params.id, req.user.id);
+    const analysis = await db.getAnalysis(req.params.id, req.user.id);
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
     if (!analysis.reasoning) return res.status(400).json({ success: false, error: { code: 'NOT_PROCESSED', message: 'Analysis must be processed first.' } });
 
     const summary = await aiService.generateSummary(analysis);
-    db.updateAnalysis(req.params.id, { customerSummary: summary }, req.user.id);
+    await db.updateAnalysis(req.params.id, { customerSummary: summary }, req.user.id);
 
     res.json({ success: true, data: { summary } });
   } catch (error) {

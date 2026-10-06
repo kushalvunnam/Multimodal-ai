@@ -13,7 +13,7 @@ export default function History() {
         const res = await getUserAnalyses();
         if (res.success) {
           // Sort by newest first
-          const sorted = (res.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          const sorted = (res.data || []).filter(a => !(a.status === 'draft' && (!a.inputs || a.inputs.length === 0))).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setAnalyses(sorted);
         }
       } catch (e) {
@@ -73,9 +73,23 @@ export default function History() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <Link to={`/analysis/${item._id}/results`} className="inline-flex items-center text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
-                        View Results <ArrowRight className="w-4 h-4 ml-1" />
-                      </Link>
+                      {item.status === 'processed' ? (
+                        <Link to={`/analysis/${item._id}/results`} className="inline-flex items-center text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                          View Results <ArrowRight className="w-4 h-4 ml-1" />
+                        </Link>
+                      ) : item.status === 'failed' ? (
+                        <Link to={`/analysis/${item._id}/workspace`} className="inline-flex items-center text-sm font-bold text-red-600 hover:text-red-800 transition-colors">
+                          Retry <ArrowRight className="w-4 h-4 ml-1" />
+                        </Link>
+                      ) : item.status === 'processing' ? (
+                        <Link to={`/analysis/${item._id}/workspace`} className="inline-flex items-center text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                          View Progress <ArrowRight className="w-4 h-4 ml-1" />
+                        </Link>
+                      ) : (
+                        <Link to={`/analysis/${item._id}/workspace`} className="inline-flex items-center text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors">
+                          Continue Analysis <ArrowRight className="w-4 h-4 ml-1" />
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}
