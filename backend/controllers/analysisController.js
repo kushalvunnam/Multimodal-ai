@@ -26,7 +26,7 @@ exports.uploadFile = async (req, res) => {
     const type = getFileType(file.mimetype);
     const limit = SIZE_LIMITS[type] || 5 * 1024 * 1024;
     if (file.size > limit) return res.status(400).json({ success: false, error: { code: 'FILE_TOO_LARGE', message: `${type} exceeds limit.` } });
-    
+
     const storageData = await uploadService.uploadFile(file);
     const input = db.addInput(req.params.id, { ...storageData, type, status: 'uploaded' }, req.user.id);
     res.json({ success: true, data: input });
@@ -89,7 +89,6 @@ exports.getAnalysisStatus = (req, res) => {
   }
 };
 
-// Inside processAnalysis, we'll intercept the demo.
 const demoImageFindings = {
   vehicle: { make: 'Toyota', model: 'Camry' },
   damage: [{ area: 'Front Bumper', severity: 'high', description: 'Significant crush damage.' }],
@@ -111,12 +110,48 @@ const demoTextFindings = {
   entities: [], dates: [], locations: [], confidence: 0.9
 };
 
+// Turn raw visual findings into useful report signals when the cross-modal model
+// returns an empty result. This keeps image-only damage inspections useful.
+const buildImageFallbackReasoning = (imageAnalysis) => {
+  const findings = Array.isArray(imageAnalysis) ? imageAnalysis : [imageAnalysis];
+  const damages = findings.flatMap((finding, index) =>
+    (finding?.damage || []).map((damage) => ({
+      ...damage,
+      source: finding?.source || `Image ${index + 1}`
+    }))
+  );
+
+  if (!damages.length) return null;
+
+  return {
+    correlations: [],
+    contradictions: [],
+    missingInformation: [],
+    riskSignals: damages.map((damage) => ({
+      reason: `${damage.area || 'Vehicle area'} damage detected`,
+      evidence: damage.description || 'Visible damage detected in the uploaded image.',
+      sources: [damage.source],
+      severity: damage.severity || 'medium'
+    })),
+    recommendations: damages.map((damage) => ({
+      action: `Inspect ${damage.area || 'damaged area'}`,
+      reason: damage.description || 'Confirm the visible damage and repair scope.'
+    })),
+    overallAssessment: {
+      summary: damages.length === 1
+        ? `${damages[0].area || 'Vehicle'} damage was detected in the uploaded image.`
+        : `${damages.length} visible damage finding(s) were detected across the uploaded vehicle images.`,
+      confidence: Math.max(...damages.map(d => Number(d.confidence) || 0), 0)
+    }
+  };
+};
+
 exports.processAnalysis = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
     const analysis = db.getAnalysis(id, userId);
-    
+
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
     if (analysis.status === 'processing' || analysis.status === 'processed') return res.json({ success: true, data: analysis });
 
@@ -143,16 +178,27 @@ exports.processAnalysis = async (req, res) => {
 
       try {
         const results = {};
-        
+
         if (isDemo || analysis.inputs.some(i => i.type === 'image')) {
           updateStep('Image Understanding', 'processing');
           if (isDemo) {
             results.imageAnalysis = demoImageFindings;
             await new Promise(r => setTimeout(r, 1000));
           } else {
+            // IMPORTANT: analyze every uploaded image, not only the first one.
+            // The previous implementation used images[0], so extra damage photos
+            // were uploaded but silently ignored during AI processing.
             const images = analysis.inputs.filter(i => i.type === 'image');
-            const fileData = await uploadService.getFile(images[0].storageReference);
-            results.imageAnalysis = await aiService.processInput('image', fileData.buffer, fileData.mimeType);
+            const imageFindings = [];
+            for (const [index, image] of images.entries()) {
+              const fileData = await uploadService.getFile(image.storageReference);
+              const finding = await aiService.processInput('image', fileData.buffer, fileData.mimeType);
+              imageFindings.push({
+                ...finding,
+                source: image.originalName || image.fileName || image.name || `Image ${index + 1}`
+              });
+            }
+            results.imageAnalysis = imageFindings.length === 1 ? imageFindings[0] : imageFindings;
           }
           db.updateAnalysis(id, { imageAnalysis: results.imageAnalysis }, userId);
           currentProgress += stepIncrement;
@@ -208,9 +254,24 @@ exports.processAnalysis = async (req, res) => {
 
         if (Object.keys(results).length > 0) {
           updateStep('Cross-Modal Reasoning', 'processing');
-          // WE RUN REAL REASONING EVEN FOR DEMO!
           const reasoningResult = await aiService.runReasoning(results);
-          db.updateAnalysis(id, { reasoning: reasoningResult }, userId);
+          const fallbackReasoning = buildImageFallbackReasoning(results.imageAnalysis);
+          const hasUsefulReasoning = reasoningResult && !reasoningResult.error && (
+            (reasoningResult.correlations?.length || 0) > 0 ||
+            (reasoningResult.contradictions?.length || 0) > 0 ||
+            (reasoningResult.missingInformation?.length || 0) > 0 ||
+            (reasoningResult.riskSignals?.length || 0) > 0 ||
+            (reasoningResult.recommendations?.length || 0) > 0 ||
+            reasoningResult.overallAssessment?.summary
+          );
+
+          // Preserve real cross-modal reasoning when available, but never hide
+          // valid image damage findings behind an empty AI reasoning response.
+          const finalReasoning = hasUsefulReasoning
+            ? reasoningResult
+            : (fallbackReasoning || reasoningResult);
+
+          db.updateAnalysis(id, { reasoning: finalReasoning }, userId);
           currentProgress += stepIncrement;
           updateStep('Cross-Modal Reasoning', 'completed');
         }
@@ -231,7 +292,9 @@ exports.processAnalysis = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } });
   }
-};exports.chat = async (req, res) => {
+};
+
+exports.chat = async (req, res) => {
   try {
     const analysis = db.getAnalysis(req.params.id, req.user.id);
     if (!analysis) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
@@ -261,4 +324,3 @@ exports.generateCustomerSummary = async (req, res) => {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } });
   }
 };
-
