@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/authRoutes');
+const assistantRoutes = require('./routes/assistantRoutes');
 const analysisRoutes = require('./routes/analysisRoutes');
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/assistant', assistantRoutes);
 app.use('/api/analysis', analysisRoutes);
 
 app.get('/api/health', (req, res) => {
@@ -54,4 +56,5 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 

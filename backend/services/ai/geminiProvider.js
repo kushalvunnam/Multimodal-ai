@@ -117,7 +117,18 @@ ${JSON.stringify({
   return result.response.text();
 };
 
+const askAssistant = async (message, context) => {
+  const model = getModel();
+  const prompt = `You are OmniSense AI, an intelligent context-aware reasoning assistant.
+Answer the user's query professionally and concisely. Do not hallucinate.
+Context provided: ${JSON.stringify(context || {})}
+User Query: ${message}`;
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+};
+
 module.exports = {
+  askAssistant,
   generateCustomerSummary,
   analyzeImage,
   analyzeDocument,

@@ -66,5 +66,17 @@ const generateSummary = async (analysis) => {
   }
 };
 
-module.exports = { processInput, runReasoning, runChat, generateSummary };
+const askAssistant = async (message, context) => {
+  const provider = getProvider();
+  try {
+    const processFn = async () => await provider.askAssistant(message, context);
+    return await withRetry(processFn);
+  } catch (error) {
+    console.error(Ask Error:, error);
+    throw new Error('Failed to generate response.');
+  }
+};
+
+module.exports = { processInput, runReasoning, runChat, generateSummary, askAssistant };
+
 

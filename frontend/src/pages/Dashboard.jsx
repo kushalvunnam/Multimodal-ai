@@ -2,6 +2,8 @@
 import { Activity, FileText, Image as ImageIcon, Mic, AlertTriangle, ArrowRight, CheckCircle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
+import React, { useState } from 'react';
+import AssistantModal from '../components/AssistantModal';
 import { useAuth } from '../context/AuthContext';
 import { Float, Sphere, MeshDistortMaterial } from '@react-three/drei';
 
@@ -17,6 +19,7 @@ function TinyAICore() {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const stats = [
     { label: 'Total Analyses', value: '1,248', icon: Activity, color: 'text-primary', bg: 'bg-primary/10', trend: '+12%' },
     { label: 'Images Processed', value: '4,892', icon: ImageIcon, color: 'text-blue-500', bg: 'bg-blue-100', trend: '+8%' },
@@ -142,12 +145,14 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <button className="w-full mt-6 bg-white border border-gray-200 hover:border-primary text-text-main font-bold py-2.5 rounded-xl transition-colors shadow-sm">
+          <button onClick={() => setIsAssistantOpen(true)} className="w-full mt-6 bg-white border border-gray-200 hover:border-primary text-text-main font-bold py-2.5 rounded-xl transition-colors shadow-sm">
             Ask Assistant
           </button>
         </div>
       </div>
+      <AssistantModal isOpen={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} />
     </div>
   );
 }
+
 

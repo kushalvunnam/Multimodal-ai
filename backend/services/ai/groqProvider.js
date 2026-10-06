@@ -29,7 +29,17 @@ const analyzeText = async (text) => {
   return completion.choices[0]?.message?.content || '{}';
 };
 
+const askAssistant = async (message, context) => {
+  const model = getModel();
+  const chatCompletion = await groq.chat.completions.create({
+    messages: [{ role: 'system', content: `You are OmniSense AI, an intelligent context-aware reasoning assistant. Context provided: ${JSON.stringify(context || {})}` }, { role: 'user', content: message }],
+    model: model,
+  });
+  return chatCompletion.choices[0]?.message?.content || '';
+};
+
 module.exports = {
+  askAssistant,
   analyzeImage,
   analyzeDocument,
   transcribeAudio,

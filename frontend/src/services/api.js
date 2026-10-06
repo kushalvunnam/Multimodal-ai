@@ -39,3 +39,5 @@ export const getAnalysisStatus = async (analysisId) => (await apiClient.get(`/ap
 export const sendChatMessage = async (analysisId, message) => (await apiClient.post(`/api/analysis/${analysisId}/chat`, { message })).data;
 export const generateCustomerSummary = async (analysisId) => (await apiClient.post(`/api/analysis/${analysisId}/summary`)).data;
 export const checkHealth = async () => (await apiClient.get('/api/health')).data;
+
+export const askAssistant = async (message, context) => (await apiClient.post('/api/assistant', { message, context })).data;
