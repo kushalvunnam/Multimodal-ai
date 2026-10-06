@@ -1,8 +1,8 @@
 ﻿import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { UploadCloud, File, Image as ImageIcon, Mic, X, Play, AlignLeft, Sparkles, Loader2, AlertTriangle, CheckCircle, Box, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { UploadCloud, File, Image as ImageIcon, Mic, X, Play, AlignLeft, Sparkles, AlertTriangle, CheckCircle, Box, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { createAnalysis, uploadFile, removeInput, updateContext, updateAnalysisStatus } from '../services/api';
 
 const formatBytes = (bytes, decimals = 2) => {
@@ -32,22 +32,32 @@ export default function NewAnalysis() {
   const [textContext, setTextContext] = useState('');
   const [errorMsg, setErrorMsg] = useState(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const init = async () => {
-      try {
-        const res = await createAnalysis();
-        if (res.success) setAnalysisId(res.data._id);
-      } catch (err) {
-        setErrorMsg("Could not connect to backend server.");
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = await createAnalysis();
+          if (!cancelled && res.success) {
+            setAnalysisId(res.data._id);
+            setErrorMsg(null);
+            return;
+          }
+        } catch (err) {
+          if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 1200));
+        }
       }
+      if (!cancelled) setErrorMsg("Could not connect to backend server. Please refresh once the server is ready.");
     };
     init();
+    return () => { cancelled = true; };
   }, []);
 
   const onDrop = useCallback(async (acceptedFiles, rejectedFiles) => {
     setErrorMsg(null);
-    if (!analysisId) return setErrorMsg("Analysis session not initialized.");
+    if (!analysisId) return setErrorMsg("Analysis session is still initializing. Please wait a moment and try again.");
 
     if (rejectedFiles.length > 0) {
       const err = rejectedFiles[0].errors[0];
@@ -62,7 +72,7 @@ export default function NewAnalysis() {
 
       try {
         const res = await uploadFile(analysisId, file, (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          const percentCompleted = progressEvent.total ? Math.round((progressEvent.loaded * 100) / progressEvent.total) : 0;
           setFiles(prev => prev.map(f => f.id === tempId ? { ...f, progress: percentCompleted } : f));
         });
         if (res.success) setFiles(prev => prev.map(f => f.id === tempId ? { ...f, id: res.data.id, status: 'uploaded', progress: 100 } : f));
@@ -101,9 +111,17 @@ export default function NewAnalysis() {
   };
 
   const handleStart = async () => {
-    if (textContext) await updateContext(analysisId, textContext);
-    await updateAnalysisStatus(analysisId, 'ready_for_processing');
-    navigate(`/analysis/${analysisId}/workspace`);
+    if (!analysisId || isStarting) return;
+    setIsStarting(true);
+    setErrorMsg(null);
+    try {
+      if (textContext) await updateContext(analysisId, textContext);
+      await updateAnalysisStatus(analysisId, 'ready_for_processing');
+      navigate(`/analysis/${analysisId}/workspace`);
+    } catch (error) {
+      setErrorMsg(error.response?.data?.error?.message || 'Could not start analysis. Please try again.');
+      setIsStarting(false);
+    }
   };
 
   return (
@@ -119,86 +137,22 @@ export default function NewAnalysis() {
           </button>
         </div>
       </div>
-      
-      {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl font-medium flex items-center shadow-sm">
-          <AlertTriangle className="w-5 h-5 mr-3" /> {errorMsg}
-        </div>
-      )}
-
+      {errorMsg && <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl font-medium flex items-center shadow-sm"><AlertTriangle className="w-5 h-5 mr-3" /> {errorMsg}</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cards.map((card, i) => {
           const Icon = card.icon;
-          return (
-            <motion.div whileHover={{ y: -5, scale: 1.02 }} key={i} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col items-center text-center group">
-              <div className={`w-16 h-16 rounded-2xl mb-4 flex items-center justify-center shadow-inner ${card.color === 'blue' ? 'bg-blue-50 text-blue-500' : card.color === 'emerald' ? 'bg-emerald-50 text-emerald-500' : card.color === 'amber' ? 'bg-amber-50 text-amber-500' : 'bg-purple-50 text-purple-500'}`}>
-                <Icon className="w-8 h-8" />
-              </div>
-              <h3 className="text-xs font-black tracking-widest text-slate-400 mb-1">{card.type}</h3>
-              <h4 className="text-lg font-bold text-slate-800 mb-2">{card.title}</h4>
-              <p className="text-sm font-medium text-slate-500">{card.desc}</p>
-            </motion.div>
-          );
+          return <motion.div whileHover={{ y: -5, scale: 1.02 }} key={i} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col items-center text-center group"><div className={`w-16 h-16 rounded-2xl mb-4 flex items-center justify-center shadow-inner ${card.color === 'blue' ? 'bg-blue-50 text-blue-500' : card.color === 'emerald' ? 'bg-emerald-50 text-emerald-500' : card.color === 'amber' ? 'bg-amber-50 text-amber-500' : 'bg-purple-50 text-purple-500'}`}><Icon className="w-8 h-8" /></div><h3 className="text-xs font-black tracking-widest text-slate-400 mb-1">{card.type}</h3><h4 className="text-lg font-bold text-slate-800 mb-2">{card.title}</h4><p className="text-sm font-medium text-slate-500">{card.desc}</p></motion.div>;
         })}
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 pb-32">
         <div className="lg:col-span-2 space-y-6">
-          <div {...getRootProps()} className={`bg-white rounded-3xl p-8 flex flex-col items-center justify-center min-h-[300px] border-dashed border-2 transition-colors cursor-pointer relative overflow-hidden shadow-sm ${isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-400 bg-slate-50/50'}`}>
-            <input {...getInputProps()} />
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg border mb-6 z-10 transition-colors ${isDragActive ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white text-indigo-600 border-slate-100'}`}>
-              <UploadCloud className="w-10 h-10" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2 z-10">{isDragActive ? "Drop files here..." : "Drag & drop files here"}</h3>
-            <p className="text-slate-500 font-medium max-w-md text-center z-10 mb-8">Supports Images, Documents and Audio.</p>
-          </div>
-          <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center"><AlignLeft className="w-4 h-4 mr-2 text-purple-500" /> Additional Context</h3>
-            <textarea className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all min-h-[120px]" placeholder="Describe anything else..." value={textContext} onChange={(e) => setTextContext(e.target.value)}></textarea>
-          </div>
+          <div {...getRootProps()} className={`bg-white rounded-3xl p-8 flex flex-col items-center justify-center min-h-[300px] border-dashed border-2 transition-colors cursor-pointer relative overflow-hidden shadow-sm ${isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-400 bg-slate-50/50'}`}><input {...getInputProps()} /><div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg border mb-6 z-10 transition-colors ${isDragActive ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white text-indigo-600 border-slate-100'}`}><UploadCloud className="w-10 h-10" /></div><h3 className="text-xl font-bold text-slate-800 mb-2 z-10">{isDragActive ? "Drop files here..." : "Drag & drop files here"}</h3><p className="text-slate-500 font-medium max-w-md text-center z-10 mb-8">Supports Images, Documents and Audio.</p></div>
+          <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm"><h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center"><AlignLeft className="w-4 h-4 mr-2 text-purple-500" /> Additional Context</h3><textarea className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all min-h-[120px]" placeholder="Describe anything else..." value={textContext} onChange={(e) => setTextContext(e.target.value)} /></div>
         </div>
-
         <div className="bg-white border border-slate-100 rounded-3xl shadow-sm flex flex-col overflow-hidden h-[500px]">
-          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-            <h3 className="font-bold text-slate-900">Input Bag</h3>
-            <span className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-1 rounded-full shadow-sm">{files.length}</span>
-          </div>
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/20">
-            {files.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                <Box className="w-12 h-12 mb-4 opacity-20" />
-                <p className="font-medium text-sm">No sources added yet</p>
-              </div>
-            ) : (
-              files.map((file) => (
-                <div key={file.id} className="bg-white border border-slate-100 rounded-xl p-3 flex flex-col shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3 overflow-hidden">
-                      <div className={`p-2 rounded-lg shrink-0 ${file.type === 'image' ? 'bg-blue-50 text-blue-500' : file.type === 'document' ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'}`}>
-                        {file.type === 'image' && <ImageIcon className="w-4 h-4" />}
-                        {file.type === 'document' && <File className="w-4 h-4" />}
-                        {file.type === 'audio' && <Mic className="w-4 h-4" />}
-                      </div>
-                      <div className="truncate pr-4">
-                        <p className="text-sm font-bold text-slate-800 truncate" title={file.name}>{file.name}</p>
-                        <p className="text-xs font-medium text-slate-400">
-                          {file.status === 'uploading' && `Uploading ${file.progress}%`}
-                          {file.status === 'uploaded' && <span className="text-emerald-500 flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Uploaded</span>}
-                          {file.status === 'failed' && <span className="text-red-500 flex items-center"><AlertTriangle className="w-3 h-3 mr-1" /> Failed</span>}
-                        </p>
-                      </div>
-                    </div>
-                    <button onClick={() => handleRemove(file.id)} className="text-slate-400 hover:text-red-500 p-1.5 rounded-md"><X className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="p-5 border-t border-slate-100 bg-white">
-            <button onClick={handleStart} disabled={files.length === 0 || files.some(f => f.status === 'uploading')} className={`w-full py-4 rounded-full font-bold text-base transition-all flex items-center justify-center ${files.length > 0 && !files.some(f => f.status === 'uploading') ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_8px_25px_rgba(79,70,229,0.3)]' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
-              Analyze with OmniSense <ArrowRight className="w-5 h-5 ml-2" />
-            </button>
-          </div>
+          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><h3 className="font-bold text-slate-900">Input Bag</h3><span className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-1 rounded-full shadow-sm">{files.length}</span></div>
+          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/20">{files.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-slate-400"><Box className="w-12 h-12 mb-4 opacity-20" /><p className="font-medium text-sm">No sources added yet</p></div> : files.map((file) => <div key={file.id} className="bg-white border border-slate-100 rounded-xl p-3 flex flex-col shadow-sm"><div className="flex items-center justify-between"><div className="flex items-center space-x-3 overflow-hidden"><div className={`p-2 rounded-lg shrink-0 ${file.type === 'image' ? 'bg-blue-50 text-blue-500' : file.type === 'document' ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'}`}>{file.type === 'image' && <ImageIcon className="w-4 h-4" />}{file.type === 'document' && <File className="w-4 h-4" />}{file.type === 'audio' && <Mic className="w-4 h-4" />}</div><div className="truncate pr-4"><p className="text-sm font-bold text-slate-800 truncate" title={file.name}>{file.name}</p><p className="text-xs font-medium text-slate-400">{file.status === 'uploading' && `Uploading ${file.progress}%`}{file.status === 'uploaded' && <span className="text-emerald-500 flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Uploaded</span>}{file.status === 'failed' && <span className="text-red-500 flex items-center"><AlertTriangle className="w-3 h-3 mr-1" /> Failed</span>}</p></div></div><button onClick={() => handleRemove(file.id)} className="text-slate-400 hover:text-red-500 p-1.5 rounded-md"><X className="w-4 h-4" /></button></div></div>)}</div>
+          <div className="p-5 border-t border-slate-100 bg-white"><button onClick={handleStart} disabled={!analysisId || files.length === 0 || files.some(f => f.status === 'uploading') || isStarting} className={`w-full py-4 rounded-full font-bold text-base transition-all flex items-center justify-center ${analysisId && files.length > 0 && !files.some(f => f.status === 'uploading') && !isStarting ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_8px_25px_rgba(79,70,229,0.3)]' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>{isStarting ? 'Starting Analysis...' : 'Analyze with OmniSense'} {!isStarting && <ArrowRight className="w-5 h-5 ml-2" />}</button></div>
         </div>
       </div>
     </div>
