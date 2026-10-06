@@ -42,6 +42,7 @@ function SmallOrb({ color, position, speed = 2, scale = 1 }) {
 }
 
 export default function Landing() {
+  const [demoOpen, setDemoOpen] = useState(false);
   return (
     <div className="min-h-screen bg-[#F8FAFF] text-slate-900 flex flex-col relative overflow-hidden">
       {/* Light Background Gradients */}
@@ -114,7 +115,7 @@ export default function Landing() {
             <Link to="/analysis/new" className="w-full sm:w-auto flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-full text-base font-bold transition-all shadow-[0_8px_30px_rgba(79,70,229,0.3)] hover:-translate-y-1">
               Start Analysis <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
-            <button className="w-full sm:w-auto flex items-center justify-center bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-8 py-4 rounded-full text-base font-bold transition-all shadow-sm hover:shadow-md">
+            <button onClick={() => setDemoOpen(true)} className="w-full sm:w-auto flex items-center justify-center bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-8 py-4 rounded-full text-base font-bold transition-all shadow-sm hover:shadow-md cursor-pointer">
               Watch Demo
             </button>
           </motion.div>
@@ -228,6 +229,9 @@ export default function Landing() {
 
         </div>
       </main>
+
+      <ProductDemoModal isOpen={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>
   );
 }
+
