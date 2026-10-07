@@ -4,6 +4,14 @@
 
 ---
 
+## 🚀 Live Demo
+
+**Try OmniSense AI:** https://celadon-mooncake-332a11.netlify.app/
+
+**Source Code:** https://github.com/kushalvunnam/Multimodal-ai
+
+---
+
 ## What it does
 OmniSense AI is an advanced multimodal intelligence platform designed to parse disparate data formats—images, PDFs, audio recordings, and text—into a single, cohesive reasoning engine. It cross-references facts across all modalities to automatically detect consistent findings, flag potential contradictions, identify missing information, and generate actionable next steps.
 
@@ -37,8 +45,8 @@ OmniSense AI solves this by introducing a **Cross-Modal Reasoning Engine**. It i
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/omnisense-ai.git
-   cd omnisense-ai
+   git clone https://github.com/kushalvunnam/Multimodal-ai.git
+   cd Multimodal-ai
    ```
 
 2. **Backend Setup**
